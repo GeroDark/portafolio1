@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar Carta Fianza{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+    <div class="card-header text-white" style="background-color: #dc3545;">
+        <h5 class="mb-0">⚠️ Confirmar eliminación</h5>
+    </div>
+    <div class="card-body">
+        <p class="lead mb-3">
+            ¿Estás seguro de que deseas <strong class="text-danger">eliminar</strong> la carta fianza
+            <span class="fw-bold">N° {{ fianza.numero_fianza }}</span> de la empresa
+            <strong>{{ fianza.empresa.nombre }}</strong>?
+        </p>
+
+        <div class="alert alert-warning border-warning bg-warning-subtle">
+            <strong>Atención:</strong> Esta acción <u>no se puede deshacer</u>. Todos los datos y archivos adjuntos serán eliminados permanentemente.
+        </div>
+
+        <form method="post" class="d-flex gap-3 align-items-center mt-4">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger px-4">
+                🗑️ Sí, eliminar permanentemente
+            </button>
+            <a href="{% url 'buscar_empresa' %}?ruc={{ fianza.empresa.ruc }}" class="btn btn-outline-secondary">
+                ❌ Cancelar y volver
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

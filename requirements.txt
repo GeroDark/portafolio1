@@ -1,0 +1,10 @@
+Django==5.1.7
+gunicorn==21.2.0
+python-dotenv==1.1.1
+psycopg[binary]==3.1.19
+dj-database-url==2.2.0
+social-auth-app-django==5.5.1
+requests==2.32.4
+oauthlib==3.3.1
+requests-oauthlib==2.0.0
+Pillow==11.1.0

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static cie_extras %}
+{% block page_bg %}calendario{% endblock %}
+{% block title %}Calendario{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-4">📅 Calendario – {{ mes_titulo }}</h2>
+
+<div class="d-flex flex-column flex-md-row gap-4">
+  <!-- CALENDARIO -->
+  <div class="flex-grow-1">
+    <div class="d-flex justify-content-between mb-2">
+      <a class="btn btn-outline-cie btn-sm" href="?m={{ mes_anterior }}">← Mes anterior</a>
+      <a class="btn btn-outline-cie btn-sm" href="?m={{ mes_siguiente }}">Mes siguiente →</a>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-bordered text-center align-middle bg-white" style="border-radius:1rem;overflow:hidden;">
+        <thead class="table-light">
+          <tr>{% for j in dias_semana %}<th class="py-2" style="border-bottom:2px solid #F26522">{{ j }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for semana in semanas %}
+            <tr>
+             {% for dia in semana %}
+               <td id="dia-{{ dia.fecha|date:'Y-m-d' }}"
+                   class="{% if not dia.pert %}opacity-50 text-muted{% endif %}"
+                   style="min-width:7rem;height:6rem;border-color:#e0e0e0;">
+                 <div class="small mb-1 text-end">{{ dia.fecha.day }}</div>
+                 {% for f in dia.fianzas %}
+                   <div class="p-1 mb-1 border border-cie rounded-2 text-start fianza-card"
+                        data-fianza-id="{{ f.id }}" style="font-size:.72rem;cursor:pointer;">
+                     <div class="fianza-line"><strong>{{ f.numero_fianza }}</strong></div>
+                     <div class="fianza-line">{{ f.aseguradora }}</div>
+                     <div class="fianza-line">{{ f.tipo_carta|upper|replace:"_> " }}</div>
+                   </div>
+                 {% endfor %}
+               </td>
+             {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- BARRA LATERAL -->
+  <div style="width:20rem;min-width:18rem;">{% include "calendario_sidebar.html" %}</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal fade" id="fianzaModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#F26522;">
+        <h5 class="modal-title text-white"></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body d-flex gap-3">
+        <!-- Detalle -->
+        <div class="w-30 border-end pe-3">
+          <dl class="row small" id="detalleFianza"></dl>
+
+          <div class="d-grid gap-2" id="accionesFianza" style="display:none;">
+            {% if CAN_CARTAS %}
+              <a id="btnEditar"   class="btn btn-outline-primary btn-sm" href="#">✏ Editar</a>
+            {% endif %}
+            {% if CAN_ALL %}
+              <a id="btnEliminar" class="btn btn-outline-danger btn-sm" href="#">🗑 Eliminar</a>
+            {% endif %}
+          </div>
+          <hr>
+          <ul class="list-group small" id="listaArchivos"></ul>
+        </div>
+
+        <!-- Visor -->
+        <div class="flex-grow-1">
+          <iframe id="visorPdf" style="width:100%;height:80vh;" frameborder="0"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  html{scroll-behavior:smooth}
+  table.table{border:2px solid #F26522;border-radius:1rem;overflow:hidden}
+  table.table th,table.table td{border:1px solid #e0e0e0;padding:.5rem;vertical-align:top}
+  table.table thead th{border-bottom:2px solid #F26522;font-weight:bold;background:#fff;text-align:center}
+  .border-cie{border:1px solid #F26522!important}
+  .fianza-line{border-bottom:1px solid #e0e0e0;margin:0;padding:2px 0}
+  .fianza-line:last-child{border-bottom:none}
+  .btn-outline-cie{border:1px solid #F26522;color:#F26522}
+  .btn-outline-cie:hover{background:#F26522;color:#fff}
+  .w-30{width:30%}
+</style>
+
+<script>
+document.querySelectorAll('.fianza-card').forEach(card=>{
+  card.addEventListener('click',()=>{
+    const id = card.dataset.fianzaId;
+
+    // detalle
+    fetch("{% url 'carta_detalle' 0 %}".replace('/0/','/'+id+'/'))
+      .then(r=>r.json()).then(d=>{
+        // título
+        document.querySelector('#fianzaModal .modal-title').textContent =
+          `${d.empresa} – Carta Nº ${d.numero}`;
+
+        // detalle
+        const det=document.getElementById('detalleFianza');
+        det.innerHTML=`<dt class="col-5">N°</dt><dd class="col-7">${d.numero}</dd>
+          <dt class="col-5">Aseguradora</dt><dd class="col-7">${d.aseguradora}</dd>
+          <dt class="col-5">Tipo</dt><dd class="col-7">${d.tipo_carta}</dd>
+          <dt class="col-5">Monto</dt><dd class="col-7">S/ ${Number(d.monto).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</dd>
+          <dt class="col-5">Plazo</dt><dd class="col-7">${d.plazo}</dd>
+          <dt class="col-5">Vence</dt><dd class="col-7">${d.vencimiento}</dd>
+          <dt class="col-5">Entidad / Beneficiario</dt><dd class="col-7">${d.entidad}</dd>`;
+
+        if(d.tiene_consorcio){
+          det.innerHTML+=`
+            <dt class="col-12 mt-2 fw-bold text-warning">Datos del Consorcio</dt>
+            <dt class="col-5">Nombre</dt><dd class="col-7">${d.nombre_consorcio}</dd>
+            <dt class="col-5">Empresas</dt><dd class="col-7">${d.empresas_consorciadas}</dd>
+            <dt class="col-5">Representante</dt><dd class="col-7">${d.representante_legal}</dd>
+            <dt class="col-5">DNI/C.E.</dt><dd class="col-7">${d.dni_representante}</dd>`;
+        }
+
+        document.getElementById('btnEditar').href   = d.url_editar;
+        document.getElementById('btnEliminar').href = d.url_eliminar;
+        document.getElementById('accionesFianza').style.display='';
+      });
+
+    // archivos
+    fetch("{% url 'carta_archivos' 0 %}".replace('/0/','/'+id+'/'))
+      .then(r=>r.json()).then(data=>{
+        const lista=document.getElementById('listaArchivos');
+        lista.innerHTML='';
+        document.getElementById('visorPdf').src='';
+        data.archivos.forEach(a=>{
+          const li=document.createElement('li');
+          li.className='list-group-item list-group-item-action';
+          li.textContent=a.nombre;
+          li.style.cursor='pointer';
+          li.onclick=()=>{ document.getElementById('visorPdf').src=a.url; };
+          lista.appendChild(li);
+        });
+      });
+
+    new bootstrap.Modal('#fianzaModal').show();
+  });
+});
+</script>
+{% endblock %}

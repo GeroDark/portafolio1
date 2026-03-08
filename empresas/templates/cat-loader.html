@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cargando…</title>
+  <style>
+    /* —————— Reset básicos —————— */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e6dcdc;
+      font-family: sans-serif;
+    }
+
+    /* —————— Contenedor del gato —————— */
+    .cat {
+      position: relative;
+      width: 100%;
+      max-width: 20em;
+      aspect-ratio: 1;
+      overflow: hidden;
+      background-color: #e6dcdc;
+    }
+    /* Pausa/continúa la animación con hover/active */
+    .cat:hover > * { animation-play-state: paused; }
+    .cat:active > * { animation-play-state: running; }
+
+    /* —————— Reglas comunes a cada segmento —————— */
+    .cat__head,
+    .cat__body,
+    .cat__tail {
+      position: absolute;
+      inset: 0; /* top/right/bottom/left = 0 */
+      animation: rotating 2.79s cubic-bezier(.65,.54,.12,.93) infinite;
+    }
+    /* Retrasos para escalonar la rotación */
+    .cat__body { animation-delay: 0.1s; }
+    .cat__body:nth-of-type(2) { animation-delay: 0.2s; }
+    .cat__tail { animation-delay: 0.2s; }
+
+    /* Pseudo-elemento con la imagen partida */
+    .cat__head::before,
+    .cat__body::before,
+    .cat__tail::before {
+      content: '';
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      background-size: 200%;
+      background-repeat: no-repeat;
+      background-image: url('https://images.weserv.nl/?url=i.imgur.com/M1raXX3.png&il');
+    }
+
+    /* Posicionamiento y transform para cada parte */
+    .cat__head::before {
+      top: 0; right: 0;
+      background-position: 100% 0%;
+      transform-origin: 0% 100%;
+      transform: rotate(90deg);
+    }
+    .cat__body::before {
+      right: 0; bottom: 0;
+      background-position: 100% 100%;
+      transform-origin: 0% 0%;
+    }
+    .cat__tail::before {
+      left: 0; bottom: 0;
+      background-position: 0% 100%;
+      transform-origin: 100% 0%;
+      transform: rotate(-30deg);
+    }
+
+    /* Animación de rotación */
+    @keyframes rotating {
+      from { transform: rotate(720deg); }
+      to   { transform: rotate(0deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="cat">
+    <div class="cat__head"></div>
+    <div class="cat__body"></div>
+    <div class="cat__body"></div>
+    <div class="cat__tail"></div>
+  </div>
+
+  <script>
+    // Tras 2 segundos redirige al destino real del login
+    setTimeout(function(){
+      window.location.href = "{{ next_url }}";
+    }, 10000);
+  </script>
+</body>
+</html>

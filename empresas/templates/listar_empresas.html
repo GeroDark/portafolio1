@@ -1,0 +1,603 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% block page_bg %}cie{% endblock %}
+{% block title %}Lista de Empresas{% endblock %}
+
+{% block content %}
+
+
+  {# ────────────────────────────────────────────────────────────────────────── #}
+  {# 1) FORMULARIO DE BÚSQUEDA CON AUTOCOMPLETADO                           #}
+  <div class="row mb-4">
+    <div class="col-md-8 offset-md-2">
+      <form
+        method="get"
+        action="{% url 'listar_empresas' %}"
+        id="form-buscar-listar"
+        class="d-flex position-relative"
+      >
+        <input
+          type="text"
+          name="q"
+          id="buscar_input_listar"
+          class="form-control me-2 rounded-pill"
+          placeholder="RUC, nombre, gerente, consorcio o representante..."
+          value="{{ busqueda }}"
+          autocomplete="off"
+        >
+
+        <!-- ⬇️ Mueve el UL justo después del input y dale fondo -->
+        <ul
+          id="suggestions_listar"
+          class="list-group position-absolute w-100"
+          style="z-index:1000; top:100%; left:0; background:#fff; max-height:260px; overflow:auto;"
+        ></ul>
+
+        <button
+          type="submit"
+          class="btn rounded-pill px-4"
+          style="background-color: orange; border: 1px solid black; color: white;"
+        >
+          Buscar
+        </button>
+      </form>
+    </div>
+  </div>
+  {# ────────────────────────────────────────────────────────────────────────── #}
+
+  {# 2) Botón de volver a búsqueda (para el usuario) #}
+  <a href="{% url 'buscar_empresa' %}" class="btn btn-outline-dark mb-4">
+    ← Volver a búsqueda por RUC
+  </a>
+  {# ────────────────────────────────────────────────────────────────────────── #}
+
+  {% if seleccionada %}
+    {# ────────────────────────────────────────────────────────────────────────── #}
+    {#  BLOQUE “EMPRESA SELECCIONADA” con TODOS los datos, botones y PAGOS     #}
+    <div class="row mb-4">
+      <div class="col-md-10 offset-md-1">
+
+        {# ────────── 1) Tarjeta “Datos Generales de la Empresa” con botones ────────── #}
+        <div class="card border-warning shadow-sm">
+          <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <div>
+              <i class="bi bi-file-earmark-text-fill"></i>
+              <strong>Datos Generales de la Empresa</strong>
+            </div>
+            <div>
+              <a
+                href="{% url 'nuevo_pago_empresa' seleccionada.id %}"
+                class="btn btn-sm btn-success"
+                style="margin-right:.5rem;">
+                💳 Facturar
+              </a>
+              <a
+                href="{% url 'editar_empresa' seleccionada.id %}"
+                class="btn btn-sm btn-primary"
+                style="margin-right:.5rem;">
+                ✏️ Editar
+              </a>
+              {% if CAN_DELETE_ANY %}
+                <a
+                  href="{% url 'eliminar_empresa' seleccionada.id %}"
+                  class="btn btn-sm btn-danger">
+                  🗑️ Eliminar
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-body">
+            <p><strong>RUC:</strong> {{ seleccionada.ruc }}</p>
+            <p><strong>Nombre:</strong> {{ seleccionada.nombre }}</p>
+            <p><strong>Nombre del Gerente:</strong> {{ seleccionada.nombre_gerente }}</p>
+            <p><strong>DNI/C.E. del Gerente:</strong> {{ seleccionada.dni_gerente }}</p>
+            <p><strong>Teléfono:</strong> {{ seleccionada.telefono|default:"—" }}</p>
+            <p><strong>Correo:</strong> {{ seleccionada.correo|default:"—" }}</p>
+            <p><strong>Correo de envío:</strong> {{ seleccionada.correo_envio|default:"—" }}</p>
+          </div>
+        </div>
+        {# ────────────────────────────────────────────────────────────────────────── #}
+
+        {# ────────── 2) Bloque de PAGOS, desplegable ────────── #}
+        {% if SHOW_CARTA_PAGOS %}
+          <!-- PAGOS – CARTAS FIANZA -->
+          <div class="card border-info shadow-sm mt-3">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+              <div><i class="bi bi-cash-stack"></i> <strong>Pagos (Cartas Fianza)</strong></div>
+            </div>
+            <div class="card-body p-0">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light text-center">
+                  <tr>
+                    <th>Registro</th>
+                    <th>Moneda / Total</th>
+                    <th>Estado</th>
+                    <th>Origen / Vinculado a</th>
+                    <th>Adelantos</th>
+                    <th>Documentos</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for pago in pagos_cartas %}
+                    
+                      <tr class="small">
+                        <td class="text-center">{{ pago.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ pago.moneda }} {{ pago.monto_total|floatformat:2|intcomma }}</td>
+                        <td class="text-center">
+                          {% if pago.cancelado %}✔️ Pagado<br><small>({{ pago.get_tipo_comprobante_display }}, {{ pago.fecha_pago|date:"d/m/Y" }})</small>{% else %}⏳ Pendiente{% endif %}
+                        </td>
+                        <td>{% if pago.carta %}Carta Nº {{ pago.carta.numero_fianza }} – {{ pago.carta.aseguradora }}{% else %}—{% endif %}</td>
+                        <td>
+                          {% if pago.adelantos.exists %}
+                            <ul class="mb-0 ps-3 text-start">
+                              {% for a in pago.adelantos.all %}
+                                <li>{{ a.fecha|date:"d/m/Y" }} – {{ pago.moneda }} {{ a.monto|floatformat:2|intcomma }}</li>
+                              {% endfor %}
+                            </ul>
+                          {% else %} — {% endif %}
+                        </td>
+                        <td>
+                          {% if pago.documentos.exists %}
+                            <ul class="mb-0 ps-3 text-start">
+                              {% for d in pago.documentos.all %}
+                                <li><a href="#" class="doc-link-selected" data-url="{{ d.archivo.url }}">📄 {{ d.archivo.name|cut:"/" }}</a></li>
+                              {% endfor %}
+                            </ul>
+                          {% else %} — {% endif %}
+                        </td>
+                        <td class="text-center">
+                          <a href="{% url 'editar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
+                          {% if CAN_DELETE_ANY %}
+                            <a href="{% url 'eliminar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    
+                  {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">No hay pagos registrados.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+        {% if SHOW_FIDEI_PAGOS %}
+          <!-- PAGOS – FIDEICOMISOS -->
+          
+          <div class="card border-success shadow-sm mt-3">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+              <div><i class="bi bi-cash-stack"></i> <strong>Pagos (Fideicomisos)</strong></div>
+            </div>
+            <div class="card-body p-0">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light text-center">
+                  <tr>
+                    <th>Registro</th>
+                    <th>Moneda / Total</th>
+                    <th>Estado</th>
+                    <th>Origen / Vinculado a</th>
+                    <th>Adelantos</th>
+                    <th>Documentos</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for pago in pagos_fidei %}
+                    
+                      <tr class="small">
+                        <td class="text-center">{{ pago.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ pago.moneda }} {{ pago.monto_total|floatformat:2|intcomma }}</td>
+                        <td class="text-center">
+                          {% if pago.cancelado %}✔️ Pagado<br><small>({{ pago.get_tipo_comprobante_display }}, {{ pago.fecha_pago|date:"d/m/Y" }})</small>{% else %}⏳ Pendiente{% endif %}
+                        </td>
+                        <td>{% if pago.fideicomiso %}{{ pago.fideicomiso.entidad_fiduciaria }} – {{ pago.fideicomiso.tributador_nombre }}{% else %}—{% endif %}</td>
+                        <td>
+                          {% if pago.adelantos.exists %}
+                            <ul class="mb-0 ps-3 text-start">
+                              {% for a in pago.adelantos.all %}
+                                <li>{{ a.fecha|date:"d/m/Y" }} – {{ pago.moneda }} {{ a.monto|floatformat:2|intcomma }}</li>
+                              {% endfor %}
+                            </ul>
+                          {% else %} — {% endif %}
+                        </td>
+                        <td>
+                          {% if pago.documentos.exists %}
+                            <ul class="mb-0 ps-3 text-start">
+                              {% for d in pago.documentos.all %}
+                                <li><a href="#" class="doc-link-selected" data-url="{{ d.archivo.url }}">📄 {{ d.archivo.name|cut:"/" }}</a></li>
+                              {% endfor %}
+                            </ul>
+                          {% else %} — {% endif %}
+                        </td>
+                        <td class="text-center">
+                          <a href="{% url 'editar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
+                          {% if CAN_DELETE_ANY %}
+                            <a href="{% url 'eliminar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    
+                  {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted">No hay pagos registrados.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        
+        
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  <h2 class="mb-4 text-primary-emphasis">🗂️ <strong>Empresas Registradas</strong></h2>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle shadow-sm">
+      <thead style="background-color: #f05523;" class="text-white text-center">
+        <tr>
+          <th>RUC</th>
+          <th>Nombre</th>
+          <th>Gerente</th>
+          <th>Teléfono</th>
+          <th>Correo</th>
+          <th>Correo de envío</th>
+          <th>Pagos</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for empresa in empresas %}
+          <tr class="empresa-row" data-empresa-id="{{ empresa.id }}">
+            <td class="text-center">{{ empresa.ruc }}</td>
+            <td>{{ empresa.nombre }}</td>
+            <td>{{ empresa.nombre_gerente }}</td>
+            <td class="text-center">{{ empresa.telefono|default:"—" }}</td>
+            <td>{{ empresa.correo|default:"—" }}</td>
+            <td>{{ empresa.correo_envio|default:"—" }}</td>
+            <td class="text-center">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-info btn-toggle-payments"
+                data-empresa-id="{{ empresa.id }}">
+                <i class="bi bi-caret-down-fill"></i>
+                
+                Pagos ({{ empresa.pagos_count }})
+                
+              </button>
+            </td>
+            <td class="d-flex justify-content-center gap-1">
+              <a href="{% url 'nuevo_pago_empresa' empresa.id %}" class="btn btn-sm btn-outline-success">💳 Facturación</a>
+              <a href="{% url 'editar_empresa' empresa.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
+              {% if CAN_DELETE_ANY %}
+                <a href="{% url 'eliminar_empresa' empresa.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+              {% endif %}
+            </td>
+          </tr>
+
+          {# — Fila oculta con detalle de pagos — #}
+          <tr class="details-row" id="details-{{ empresa.id }}" style="display:none;">
+            <td colspan="8" class="p-0">
+              <table class="table mb-0">
+                <thead class="table-light text-center">
+                  <tr>
+                    <th>Registro</th>
+                    <th>Moneda / Total</th>
+                    <th>Estado</th>
+                    <th>Origen / Vinculado a</th>
+                    <th>Adelantos</th>
+                    <th>Documentos</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for pago in empresa.pagos_visibles %}
+                    <tr class="small">
+                      <td class="text-center">{{ pago.created_at|date:"d/m/Y H:i" }}</td>
+                      <td>{{ pago.moneda }} {{ pago.monto_total|floatformat:2|intcomma }}</td>
+                      <td>
+                        {% if pago.cancelado %}
+                          ✔️ Pagado<br>
+                          <small>({{ pago.get_tipo_comprobante_display }}, {{ pago.fecha_pago|date:"d/m/Y" }})</small>
+                        {% else %}
+                          ⏳ Pendiente
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if pago.origen == 'CARTA' and pago.carta %}
+                          CARTA – Nº {{ pago.carta.numero_fianza }} ({{ pago.carta.aseguradora }})
+                        {% elif pago.origen == 'FIDEI' and pago.fideicomiso %}
+                          FIDEI – {{ pago.fideicomiso.entidad_fiduciaria }} / {{ pago.fideicomiso.tributador_nombre }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if pago.adelantos.exists %}
+                          <ul class="mb-0 ps-3 text-start">
+                            {% for a in pago.adelantos.all %}
+                              <li>{{ a.fecha|date:"d/m/Y" }} – {{ pago.moneda }} {{ a.monto|floatformat:2|intcomma }}</li>
+                            {% endfor %}
+                          </ul>
+                        {% else %} — {% endif %}
+                      </td>
+                      <td>
+                        {% if pago.documentos.exists %}
+                          <ul class="mb-0 ps-3 text-start">
+                            {% for d in pago.documentos.all %}
+                              <li>
+                                <a href="#" class="doc-link" data-url="{{ d.archivo.url }}">
+                                  📄 {{ d.archivo.name|cut:"/" }}
+                                </a>
+                              </li>
+                            {% endfor %}
+                          </ul>
+                        {% else %} — {% endif %}
+                      </td>
+                      <td class="text-center">
+                        <a href="{% url 'editar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
+                        {% if CAN_DELETE_ANY %}
+                          <a href="{% url 'eliminar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="6" class="text-center py-2 text-muted">No hay pagos registrados.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-3">No hay empresas registradas.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ────────── Modal para Editar Pago ────────── -->
+  <div class="modal fade" id="editarPagoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title">✏️ Editar Pago</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Aquí se inyectará el HTML que devuelve la vista editar_pago_empresa -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────── Modal visor PDF ────────── -->
+  <div class="modal fade" id="pdfViewer" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white py-2">
+          <h6 class="modal-title m-0">Visor de documento</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-0" style="height:80vh;">
+          <iframe id="pdfFrame" style="width:100%;height:100%;" frameborder="0"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ────────── Tabla de Consorcios Registrados ────────── #}
+  <h2 class="mb-4 text-warning-emphasis">
+    📂 <strong>Consorcios Registrados</strong>
+  </h2>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle shadow-sm">
+      <thead style="background-color: #ffc107;" class="text-dark text-center">
+        <tr>
+          <th>Nombre Consorcio</th>
+          <th>Representante Legal</th>
+          <th>Teléfono</th>
+          <th>Correo</th>
+          <th>Correo de envío</th>
+          <th>Pagos</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in consorcios %}
+          <tr class="empresa-row" data-empresa-id="{{ c.id }}">
+            <td>{{ c.nombre_consorcio }}</td>
+            <td>{{ c.representante_legal }}</td>
+            <td class="text-center">{{ c.telefono|default:"—" }}</td>
+            <td>{{ c.correo|default:"—" }}</td>
+            <td>{{ c.correo_envio|default:"—" }}</td>
+            <td class="text-center">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-info btn-toggle-payments"
+                data-empresa-id="{{ c.id }}">
+                <i class="bi bi-caret-down-fill"></i>
+                
+                Pagos ({{ c.pagos_count }})
+                
+              </button>
+            </td>
+            <td class="d-flex justify-content-center gap-1">
+              <a href="{% url 'nuevo_pago_empresa' c.id %}" class="btn btn-sm btn-outline-success">💳 Facturación</a>
+              <a href="{% url 'editar_empresa' c.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
+              {% if CAN_DELETE_ANY %}
+                <a href="{% url 'eliminar_empresa' c.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+              {% endif %}
+            </td>
+          </tr>
+
+          {# — Fila oculta con detalle de pagos — (SOLO UNA FILA) #}
+          <tr class="details-row" id="details-{{ c.id }}" style="display:none;">
+            <td colspan="7" class="p-0">
+              <table class="table mb-0">
+                <thead class="table-light text-center">
+                  <tr>
+                    <th>Registro</th>
+                    <th>Moneda / Total</th>
+                    <th>Estado</th>
+                    <th>Origen / Vinculado a</th>
+                    <th>Adelantos</th>
+                    <th>Documentos</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for pago in c.pagos_visibles %}
+                    <tr class="small">
+                      <td class="text-center">{{ pago.created_at|date:"d/m/Y H:i" }}</td>
+                      <td>{{ pago.moneda }} {{ pago.monto_total|floatformat:2|intcomma }}</td>
+                      <td>
+                        {% if pago.cancelado %}
+                          ✔️ Pagado<br>
+                          <small>({{ pago.get_tipo_comprobante_display }}, {{ pago.fecha_pago|date:"d/m/Y" }})</small>
+                        {% else %} ⏳ Pendiente {% endif %}
+                      </td>
+                      <td>
+                        {% if pago.origen == 'CARTA' and pago.carta %}
+                          CARTA – Nº {{ pago.carta.numero_fianza }} ({{ pago.carta.aseguradora }})
+                        {% elif pago.origen == 'FIDEI' and pago.fideicomiso %}
+                          FIDEI – {{ pago.fideicomiso.entidad_fiduciaria }} / {{ pago.fideicomiso.tributador_nombre }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if pago.adelantos.exists %}
+                          <ul class="mb-0 ps-3 text-start">
+                            {% for a in pago.adelantos.all %}
+                              <li>{{ a.fecha|date:"d/m/Y" }} – {{ pago.moneda }} {{ a.monto|floatformat:2|intcomma }}</li>
+                            {% endfor %}
+                          </ul>
+                        {% else %} — {% endif %}
+                      </td>
+                      <td>
+                        {% if pago.documentos.exists %}
+                          <ul class="mb-0 ps-3 text-start">
+                            {% for d in pago.documentos.all %}
+                              <li>
+                                <a href="#" class="doc-link" data-url="{{ d.archivo.url }}">
+                                  📄 {{ d.archivo.name|cut:"/" }}
+                                </a>
+                              </li>
+                            {% endfor %}
+                          </ul>
+                        {% else %} — {% endif %}
+                      </td>
+                      <td class="text-center">
+                        <a href="{% url 'editar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
+                        {% if CAN_DELETE_ANY %}  
+                          <a href="{% url 'eliminar_pago_empresa' pago.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="6" class="text-center py-2 text-muted">No hay pagos registrados.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-3">No hay consorcios registrados.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1) Autocomplete (solo si existe el input y jQuery UI)
+      (function(){
+        const input = document.getElementById('buscar_input_listar');
+        const box   = document.getElementById('suggestions_listar');
+        if (!input || !box) return;
+
+        // Cierra la lista al hacer click fuera
+        document.addEventListener('click', e => {
+          if (!box.contains(e.target) && e.target !== input) box.innerHTML = '';
+        });
+
+        input.addEventListener('input', () => {
+          const term = input.value.trim();
+          if (term.length < 2) { box.innerHTML = ''; return; }
+
+          // Usa tu URL nombrada (o la ruta directa si prefieres)
+          fetch("/empresa/autocomplete/?term=" + encodeURIComponent(term))
+            .then(r => {
+              if (!r.ok) throw new Error('AUTOCOMPLETE ' + r.status);
+              return r.json();
+            })
+            .then(data => {
+              box.innerHTML = '';
+              (data || []).forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item list-group-item-action';
+                li.textContent = item.label;
+                li.addEventListener('click', () => {
+                  input.value = item.value;
+                  box.innerHTML = '';
+                  input.form.submit();
+                });
+                box.appendChild(li);
+              });
+            })
+            .catch(() => { box.innerHTML = ''; });
+        });
+      })();
+
+      // 2) Toggle de filas de pagos (Empresas + Consorcios)
+      document.querySelectorAll('.btn-toggle-payments').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id   = btn.dataset.empresaId;
+          const row  = document.getElementById(`details-${id}`);
+          const icon = btn.querySelector('i');
+          if (!row) return;
+          if (row.style.display === 'none') {
+            row.style.display = 'table-row';
+            icon && icon.classList.replace('bi-caret-down-fill','bi-caret-up-fill');
+          } else {
+            row.style.display = 'none';
+            icon && icon.classList.replace('bi-caret-up-fill','bi-caret-down-fill');
+          }
+        });
+      });
+
+      // 3) Visor PDF (funciona para .doc-link y .doc-link-selected)
+      (function () {
+        const pdfEl = document.getElementById('pdfViewer');
+        if (!pdfEl) return;  // si no existe el modal (p.ej. sin permisos), no hacemos nada
+        const pdfModal = new bootstrap.Modal(pdfEl);
+        document.addEventListener('click', e => {
+          const link = e.target.closest('.doc-link, .doc-link-selected');
+          if (!link) return;
+          e.preventDefault();
+          const frame = document.getElementById('pdfFrame');
+          if (!frame) return;
+          frame.src = link.dataset.url + '#toolbar=0&navpanes=0';
+          pdfModal.show();
+        });
+      })();
+    });
+  </script>
+{% endblock %}

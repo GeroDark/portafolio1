@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Permiso denegado{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="alert alert-danger shadow-sm">
+    <h5 class="mb-2">Permiso denegado (403)</h5>
+    <p>No tienes permisos para acceder a esta sección.</p>
+    <a href="{% url 'buscar_empresa' %}" class="btn btn-primary">Volver al inicio</a>
+  </div>
+</div>
+{% endblock %}

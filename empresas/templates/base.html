@@ -1,0 +1,257 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Empresa Web{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.2.8/pdfobject.min.js"></script>
+    
+
+    <style>
+        .btn-cie-orange {
+            background-color: #F26522;
+            color: white;
+            border: none;
+        }
+        .btn-cie-orange:hover {
+            background-color: #d3541a;
+            color: white;
+        }
+        .btn-outline-cie {
+            border: 2px solid #F26522;
+            color: #F26522;
+            background-color: transparent;
+        }
+        .btn-outline-cie:hover {
+            background-color: #F26522;
+            color: white;
+        }
+    </style>
+    <style>
+    /* ---------- Fondo con logo + velo naranja ---------- */
+    body{
+        background-color: rgba(242, 85, 35, .1);
+        /* La imagen real se inyecta por variable CSS */
+        background-image: var(--bg-url);
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+        background-attachment: fixed;      
+    }
+
+    
+
+    /* Velo naranja translúcido (90 % de opacidad) */
+    body::before {
+        content: "";
+        position: fixed;                  /* cubre toda la ventana */
+        inset: 0;
+        background: rgba(242, 101, 34, 0.10);  /* #f26522 al 10 % → 90 % translúcido */
+        pointer-events: none;             /* no bloquea clics/scroll */
+        z-index: -1;                      /* detrás de todo */
+    }
+
+    
+
+    
+    </style>
+    <style>
+        /* Color de fondo igual al del rectángulo del logo */
+        .bg-brand { background-color: #1b1b1b !important; }  /* ajusta el hex si tu logo usa otro tono */
+
+        /* ✅ más simple y difícil de que la pisen */
+        .navbar-brand .brand-logo{
+            display: inline-block;
+            height: 56px;          /* ajusta 56–64 a gusto */
+            width: 200px;          /* ancho visible del logo en la barra */
+            background-image: url("{% static 'img/logo-cie.png' %}");
+            background-repeat: no-repeat;
+            background-position: left center;
+
+            /* Truco para compensar márgenes del PNG:
+                - 'cover' llena la caja (recorta si hace falta)
+                - Si aún lo ves pequeño, usa background-size: 140% auto; o 160% auto; */
+            background-size: cover;           /* prueba también 140% auto; */
+        }
+    </style>
+</head>
+<body class="bg-light" data-bg-page="{% block page_bg %}buscar{% endblock %}">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-brand px-4 py-1">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center py-0" href="{% url 'buscar_empresa' %}">
+         <span class="brand-logo me-2" aria-label="CIE Consultora"></span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarOpciones">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-end" id="navbarOpciones">
+            <ul class="navbar-nav align-items-center">
+                {% if user.is_authenticated %}
+
+                    <!-- Búsqueda (todos los roles que tengan al menos algún módulo) -->
+                    {% if CAN_CARTAS or CAN_FIDEI or CAN_PAGOS %}
+                        <li class="nav-item me-2">
+                        <a class="btn {% if request.path == '/buscar/' %}btn-light active{% else %}btn-outline-light{% endif %}"
+                            href="{% url 'buscar_empresa' %}">
+                            🔍 Búsqueda de empresa
+                        </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Empresas / Pagos CIE (sólo master/notifier) -->
+                    {% if CAN_ALL or CAN_CARTAS or CAN_FIDEI %}
+                        <li class="nav-item me-2">
+                        <a class="btn {% if request.path == '/empresas/' %}btn-light active{% else %}btn-outline-light{% endif %}"
+                            href="{% url 'listar_empresas' %}">
+                            📁 Empresas Pago CIE
+                        </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Calendario (pedido: visible para TODOS los roles por ahora) -->
+                    {% if CAN_CARTAS or CAN_FIDEI or CAN_PAGOS %}
+                        <li class="nav-item me-2">
+                        <a class="btn {% if request.path == '/calendario/' %}btn-light active{% else %}btn-outline-light{% endif %}"
+                            href="{% url 'calendario_fianzas' %}">
+                            📅 Calendario
+                        </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Nombre y logout -->
+                    <li class="nav-item me-3">
+                        <span class="badge rounded-pill bg-light text-dark px-3 py-2 fw-semibold">
+                            {% if ROLE == 'master' %}MASTER
+                            {% elif ROLE == 'cartas' %}CARTAS FIANZA
+                            {% elif ROLE == 'fidei' %}FIDEICOMISOS
+                            {% elif ROLE == 'notifier' %}NOTIFICACIONES
+                            {% else %}{{ user.email|default:user.username }}
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <form action="{% url 'logout' %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-light">Cerrar sesión</button>
+                        </form>
+                    </li>
+                    {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Contenido principal -->
+<div class="container {% block main_container_classes %}mt-5{% endblock %}">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- TOAST de mensajes -->
+<div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    {% for message in messages %}
+    <div class="toast text-bg-{{ message.tags|default:'info' }} border-0 show mb-3 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header text-white bg-{{ message.tags|default:'info' }}">
+            <span class="me-2">
+                {% if message.tags == 'success' %} ✅
+                {% elif message.tags == 'error' %} ❌
+                {% elif message.tags == 'warning' %} ⚠️
+                {% else %} ℹ️
+                {% endif %}
+            </span>
+            <strong class="me-auto">
+                {% if message.tags == 'success' %} Éxito
+                {% elif message.tags == 'error' %} Error
+                {% elif message.tags == 'warning' %} Advertencia
+                {% else %} Información
+                {% endif %}
+            </strong>
+            <small class="text-white-50">Ahora</small>
+            <button type="button" class="btn-close btn-close-white ms-2 mb-1" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+        </div>
+        <div class="toast-body">
+            {{ message }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% block extra_js %}{% endblock %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toastElList = [].slice.call(document.querySelectorAll('.toast'));
+        toastElList.forEach(function (toastEl) {
+            const toast = new bootstrap.Toast(toastEl, {
+                autohide: true,
+                delay: 4000
+            });
+            toast.show();
+        });
+    });
+</script>
+<script>
+(function () {
+  const page = document.body.dataset.bgPage || 'buscar';
+  const w = window.screen.width, h = window.screen.height;
+
+  // Regla simple:
+  // - Vertical → 1080x1920
+  // - Muy ancho (>=2560x1440) → 2560x1440
+  // - Si no → 1920x1080 (default)
+  let key = '1920x1080';
+  if (h > w) key = '1080x1920';
+  else if (w >= 2560 && h >= 1400) key = '2560x1440';
+
+  // Mapa de imágenes por página y resolución
+  const BG_MAP = {
+    login: {
+      "1920x1080": "{% static 'img/bg/bg-login-1920x1080.jpg' %}",
+      "2560x1440": "{% static 'img/bg/bg-login-2560x1440.jpg' %}",
+      "1080x1920": "{% static 'img/bg/bg-login-1080x1920.jpg' %}",
+    },
+    buscar: {
+      "1920x1080": "{% static 'img/bg/bg-buscar-1920x1080.jpg' %}",
+      "2560x1440": "{% static 'img/bg/bg-buscar-2560x1440.jpg' %}",
+      "1080x1920": "{% static 'img/bg/bg-buscar-1080x1920.jpg' %}",
+    },
+    cie: {
+      "1920x1080": "{% static 'img/bg/bg-cie-1920x1080.jpg' %}",
+      "2560x1440": "{% static 'img/bg/bg-cie-2560x1440.jpg' %}",
+      "1080x1920": "{% static 'img/bg/bg-cie-1080x1920.jpg' %}",
+    },
+    calendario: {
+      "1920x1080": "{% static 'img/bg/bg-calendario-1920x1080.jpg' %}",
+      "2560x1440": "{% static 'img/bg/bg-calendario-2560x1440.jpg' %}",
+      "1080x1920": "{% static 'img/bg/bg-calendario-1080x1920.jpg' %}",
+    }
+  };
+
+  const chosen =
+    (BG_MAP[page] && BG_MAP[page][key]) ||
+    (BG_MAP[page] && BG_MAP[page]["1920x1080"]); // fallback
+
+  if (chosen) {
+    document.body.style.setProperty('--bg-url', `url("${chosen}")`);
+  }
+})();
+</script>
+<script>
+(function(){
+  const nav = document.querySelector('.navbar');
+  const h = nav ? nav.offsetHeight : 0;
+  // expone la altura del navbar como variable CSS
+  document.documentElement.style.setProperty('--navbar-h', h + 'px');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+{% block page_bg %}buscar{% endblock %}
+{% block title %}Búsqueda de empresa{% endblock %}
+
+{% block content %}
+<h2 class="mb-4 text-center fw-bold text-uppercase">🔎 Búsqueda&nbsp;de&nbsp;empresa</h2>
+
+<form method="get" class="row justify-content-center g-2 mb-5 position-relative">
+  <div class="col-md-6 position-relative">
+    <input
+      id="searchInput"
+      type="text"
+      name="q"
+      class="form-control form-control-lg shadow-sm rounded-pill"
+      placeholder="RUC, nombre, gerente, consorcio o representante…"
+      autocomplete="off"
+      value="{{ request.GET.q }}"
+      required>
+    <ul
+      id="suggestions"
+      class="list-group position-absolute w-100"
+      style="z-index:1000; top:100%;"></ul>
+  </div>
+  <div class="col-md-auto">
+    <button type="submit"
+      class="btn btn-lg rounded-pill text-white"
+      style="background:#F26522;">
+      Buscar
+    </button>
+  </div>
+</form>
+
+{% if resultado %}
+
+  <!-- DATOS GENERALES (Empresa o Consorcio) -->
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header text-white" style="background:#F26522;">
+      {% if resultado.es_consorcio %}
+        <strong>📄 Datos Generales del Consorcio</strong>
+      {% else %}
+        <strong>📄 Datos Generales de la Empresa</strong>
+      {% endif %}
+    </div>
+    <div class="card-body small">
+      {% if resultado.es_consorcio %}
+        <p><b>Nombre del Consorcio:</b> {{ resultado.nombre_consorcio }}</p>
+        <p><b>Representante Legal:</b> {{ resultado.representante_legal }}</p>
+        <p><b>DNI/C.E. del Representante:</b> {{ resultado.dni_representante }}</p>
+      {% else %}
+        <p><b>RUC:</b> {{ resultado.ruc }}</p>
+        <p><b>Nombre:</b> {{ resultado.nombre }}</p>
+        <p><b>Nombre del Gerente:</b> {{ resultado.nombre_gerente }}</p>
+        <p><b>DNI/C.E. del Gerente:</b> {{ resultado.dni_gerente }}</p>
+        {% if resultado.socios %}
+          <p><b>Socios:</b> {{ resultado.socios }}</p>
+        {% endif %}
+      {% endif %}
+
+      {# Campos comunes: teléfono, correo, correo_envio #}
+      <p><b>Teléfono:</b> {{ resultado.telefono|default:"—" }}</p>
+      <p><b>Correo:</b> {{ resultado.correo|default:"—" }}</p>
+      <p><b>Correo de envío:</b> {{ resultado.correo_envio|default:"—" }}</p>
+    </div>
+  </div>
+  {% if CAN_CARTAS %}
+    <!-- MINI-TARJETAS CARTAS FIANZA -->
+    <h5 class="mb-3 d-flex align-items-center gap-2">
+      <span
+        class="d-inline-flex align-items-center justify-content-center rounded-circle"
+        style="width:1.6rem;height:1.6rem;
+              background:#F26522;border:2px solid #000;">
+        <i class="bi bi-shield-lock-fill text-white" style="font-size:.9rem;"></i>
+      </span>
+      Cartas Fianza&nbsp;({{ resultado.cartas_fianza.count }})
+    </h5>
+
+    {% if resultado.cartas_fianza.all %}
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+        {% for f in resultado.cartas_fianza.all %}
+          <div class="col">
+            <div
+              class="card h-100 border-cie carta-mini"
+              data-fianza-id="{{ f.id }}"
+              style="cursor:pointer;">
+              <div
+                class="card-header {% if f.liquidada %}bg-success{% else %}bg-secondary{% endif %} text-white py-1 px-2 small">
+                Nº&nbsp;{{ f.numero_fianza }}-{{ f.aseguradora }}
+              </div>
+              <div class="card-body p-2"
+                  data-tipo="{{ f.tipo_completo }}">
+                <div class="fw-bold small">{{ f.numero_fianza }}</div>
+                <div class="small text-muted">{{ f.aseguradora }}</div>
+                <div class="small">{{ f.tipo_completo }}</div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-warning small">
+        ⚠️ Esta empresa no tiene cartas fianza registradas.
+      </div>
+    {% endif %}
+  {% endif %}  
+  <!-- FIDEICOMISOS -->
+  {% if CAN_FIDEI or CAN_NOTIF or CAN_ALL %}
+    {% if resultado.fideicomisos.all %}
+      <h4 class="mt-5 text-primary">📘 Fideicomisos</h4>
+      {% for f in resultado.fideicomisos.all %}
+        <div class="card shadow-sm mb-4 border-0">
+          <div class="card-header bg-secondary text-white">
+            🏛️ Entidad Fiduciaria: {{ f.entidad_fiduciaria }}
+          </div>
+          <div class="card-body small">
+            <p class="mb-1 fw-semibold text-primary">🏦 Tributador</p>
+            <ul class="mb-3">
+              <li><b>Nombre:</b> {{ f.tributador_nombre }}</li>
+              <li><b>Banco:</b> {{ f.tributador_banco }}</li>
+              <li><b>Nro de Cuenta:</b> {{ f.tributador_nro_cuenta }}</li>
+              <li><b>Nro de Cuenta CCI:</b> {{ f.tributador_nro_cci }}</li>
+            </ul>
+            <p class="fw-semibold text-success mb-1">💰 Adelanto Directo</p>
+            <ul>
+              <li>Total: {{ f.adelanto_directo_moneda }} {{ f.adelanto_directo_monto|floatformat:2|intcomma }}</li>
+              <li>Con retención (96 %): {{ f.adelanto_directo_moneda }} {{ f.directo_con_retencion|floatformat:2|intcomma }}</li>
+              <li>Restante: {{ f.adelanto_directo_moneda }} {{ f.directo_restante|floatformat:2|intcomma }}</li>
+            </ul>
+            <p class="fw-semibold text-success mb-1">💰 Adelanto Materiales</p>
+            <ul>
+              <li>Total: {{ f.adelanto_materiales_moneda }} {{ f.adelanto_materiales_monto|floatformat:2|intcomma }}</li>
+              <li>Con retención (96 %): {{ f.adelanto_materiales_moneda }} {{ f.materiales_con_retencion|floatformat:2|intcomma }}</li>
+              <li>Restante: {{ f.adelanto_materiales_moneda }} {{ f.materiales_restante|floatformat:2|intcomma }}</li>
+            </ul>
+            <hr class="my-3">
+            <p><b>Entidad Ejecutora:</b> {{ f.entidad_ejecutora }}</p>
+            <p><b>Entidad Fiduciaria:</b> {{ f.entidad_fiduciaria }}</p>
+            <p><b>Representante:</b> {{ f.representante }}</p>
+            <p><b>Residente de Obra:</b> {{ f.residente_obra }}</p>
+            <p><b>Estado de Ejecución:</b> {{ f.estado_ejecucion }}</p>
+            <p><b>Modalidad de Ejecución:</b> {{ f.modalidad_ejecucion }}</p>
+            <p><b>Plazo de Ejecución:</b> {{ f.plazo_ejecucion }}</p>
+            <p><b>Monto del Contrato:</b> {{ f.monto_contrato_moneda }} {{ f.monto_contrato|floatformat:2|intcomma }}</p>
+            <p><b>Inicio de Obra:</b> {{ f.fecha_inicio|date:"d/m/Y" }}</p>
+            <p><b>Fin de Obra:</b> {{ f.fecha_termino|date:"d/m/Y" }}</p>
+            {% if f.desembolsos.exists %}
+              <hr><p class="fw-semibold">📤 Desembolsos</p>
+              <ul>
+                {% for d in f.desembolsos.all %}
+                  <li>{{ forloop.counter }}º {{ d.get_tipo_display }} – {{ d.fecha|date:"d/m/Y" }} – {% if d.tipo == 'directo' %}
+                      {{ f.adelanto_directo_moneda }}
+                    {% else %}
+                      {{ f.adelanto_materiales_moneda }}
+                    {% endif %}{{ d.monto|floatformat:2|intcomma }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if f.tiene_consorcio %}
+              <hr>
+              <h6 class="fw-bold">🤝 Datos del Consorcio</h6>
+              <p><b>Nombre:</b> {{ f.nombre_consorcio }}</p>
+              <p><b>Empresas:</b> {{ f.empresas_consorciadas }}</p>
+              <p><b>Representante:</b> {{ f.representante_legal }}</p>
+              <p><b>DNI/C.E.:</b> {{ f.dni_representante }}</p>
+
+              <p><b>Es independiente:</b> {{ f.es_independiente|yesno:"Sí,No" }}</p>
+              {% if f.es_independiente and f.ruc_consorcio %}
+                <p><b>RUC del consorcio:</b> {{ f.ruc_consorcio }}</p>
+              {% endif %}
+            {% endif %}
+            
+            {# ---- Correo(s) ---- #}
+            {% if f.correos.exists %}
+              <p class="fw-bold text-primary mb-1">📧 Correos de notificación</p>
+              <ul class="mb-3">
+                {% for c in f.correos.all %}
+                    <li>{{ c.nombre }} – <a href="mailto:{{ c.email }}">{{ c.email }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+                <hr>
+            {# ---- Adelantos y Deuda ---- #}
+                      {% if f.deuda_total %}
+              <p><b>Deuda total:</b> {{ f.deuda_total_moneda }}{{ f.deuda_total|floatformat:2|intcomma }}</p>
+              <p><b>Pagado (adelantos):</b> {{ f.deuda_total_moneda }}{{ f.suma_adelantos|floatformat:2|intcomma }}</p>
+              <p><b>Resta:</b> {{ f.deuda_total_moneda }}{{ f.deuda_restante|floatformat:2|intcomma }}</p>
+            {% endif %}
+
+            {# ---- Detalle de cada adelanto ---- #}
+            {% if f.adelantos.all %}
+              
+              <p class="fw-semibold">💸 Adelantos registrados</p>
+              <ul>
+                {% for a in f.adelantos.all %}
+                  <li>{{ a.fecha|date:"d/m/Y" }} – {{ f.deuda_total_moneda }}{{ a.monto|floatformat:2|intcomma }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+
+            {# ---- Documentos por categoría ---- #}
+            {% for label,docs in f.documentos_por_categoria.items %}
+              <p class="fw-semibold mt-3">{{ label }}</p>
+              <ul>
+                  {% for d in docs %}
+                    <li><a href="{{ d.archivo.url }}" target="_blank">{{ d.filename }}</a></li>
+                  {% endfor %}
+              </ul>
+            {% endfor %}
+
+            {% if CAN_ALL or CAN_FIDEI or CAN_NOTIF %}
+              <div class="mt-3 d-flex flex-wrap gap-2">
+                {% if CAN_ALL or CAN_FIDEI %}
+                  <a href="{% url 'agregar_desembolso' f.id %}" class="btn btn-sm btn-outline-secondary">➕ Registrar desembolso</a>
+                {% endif %}
+
+                <a href="{% url 'editar_fideicomiso' f.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
+
+                {% if CAN_ALL %}
+                  <a href="{% url 'eliminar_fideicomiso' f.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-secondary small">
+        ℹ️ Esta empresa no tiene fideicomisos registrados.
+      </div>
+    {% endif %}
+  {% endif %}   
+  <!-- BOTONES DE ACCIÓN -->
+  <div class="text-end mt-4 d-flex justify-content-end gap-2">
+    {% if CAN_CARTAS %}
+      <a href="{% url 'agregar_carta_fianza' empresa_id=resultado.id %}"
+        class="btn btn-primary rounded-pill px-4 shadow-sm">
+        <i class="bi bi-plus-lg me-1"></i> Nueva Carta Fianza
+      </a>
+    {% endif %}
+    {% if CAN_FIDEI %}
+      <a href="{% url 'agregar_fideicomiso' empresa_id=resultado.id %}"
+        class="btn btn-success rounded-pill px-4 shadow-sm">
+        <i class="bi bi-plus-lg me-1"></i> Agregar Fideicomiso
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- MODAL DETALLE CARTA FIANZA -->
+  <div class="modal fade" id="fianzaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:#F26522;">
+          <h6 class="modal-title text-white m-0" id="modalTitulo">Detalle</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body d-flex gap-3">
+          <div class="border-end pe-3" style="width:30%; min-width:250px;">
+            <dl class="row small mb-0" id="detalleFianza"></dl>
+            <div class="d-grid gap-2 my-3">
+              {% if CAN_ALL %}
+                <a id="btnLiquidar" class="btn btn-outline-warning btn-sm" style="display:none;" href="#">⚖️ Liquidar</a>
+              {% endif %}
+              {% if CAN_CARTAS %}
+                <a id="btnEditar"   class="btn btn-outline-primary btn-sm" href="#">✏ Editar</a>
+              {% endif %}
+              {% if CAN_ALL %}
+                <a id="btnEliminar" class="btn btn-outline-danger btn-sm" href="#">🗑 Eliminar</a>
+              {% endif %}
+            </div>
+            <ul class="list-group small" id="listaArchivos"></ul>
+          </div>
+          <div class="flex-grow-1">
+            <iframe id="visorPdf" style="width:100%;height:80vh;" frameborder="0"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% elif request.GET.q %}
+  <div class="alert alert-danger">❌ No se encontró ninguna empresa con ese criterio.</div>
+{% endif %}
+
+{% if CAN_PAGOS %}
+  <div class="mt-5 text-center">
+    <a href="{% url 'registrar_empresa' %}" class="btn btn-lg rounded-pill text-white px-4" style="background:#F26522;">🏢 Registrar nueva empresa</a>
+  </div>
+{% endif %}
+{% endblock %}
+
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // ------ Helpers ------
+    const $ = (sel) => document.querySelector(sel);
+
+    // Modal bootstrap preparado de una vez
+    const modalEl = document.getElementById('fianzaModal');
+    const modal   = modalEl ? new bootstrap.Modal(modalEl) : null;
+
+    // Rellena el detalle del modal con el JSON de 'carta_detalle'
+    function renderDetalle(d){
+      document.getElementById('modalTitulo').textContent =
+        `${d.empresa || '—'} – Carta Nº ${d.numero}`;
+
+      const det = document.getElementById('detalleFianza');
+      det.innerHTML = `
+        <dt class="col-5">N°</dt><dd class="col-7">${d.numero}</dd>
+        <dt class="col-5">Aseguradora</dt><dd class="col-7">${
+          d.aseguradora==='OTROS'?d.aseguradora_otro:d.aseguradora
+        }</dd>
+        <dt class="col-5">Tipo</dt><dd class="col-7">${d.tipo_carta}</dd>
+        <dt class="col-5">Monto</dt><dd class="col-7">${d.moneda} ${Number(d.monto).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</dd>
+        <dt class="col-5">Plazo</dt><dd class="col-7">${d.plazo_meses} m / ${d.plazo_dias} d</dd>
+        <dt class="col-5">Vence</dt><dd class="col-7">${d.vencimiento}</dd>
+        <dt class="col-5">Entidad</dt><dd class="col-7">${d.entidad}</dd>
+        ${d.afianzado?`<dt class="col-5">Afianzado</dt><dd class="col-7">${d.afianzado}</dd>`:``}
+      `;
+
+      if (d.tiene_consorcio) {
+        det.insertAdjacentHTML('beforeend', `
+          <dt class="col-12 text-warning fw-bold mt-2">Datos del Consorcio</dt>
+          <dt class="col-5">Nombre</dt><dd class="col-7">${d.nombre_consorcio}</dd>
+          <dt class="col-5">Empresas</dt><dd class="col-7">${d.empresas_consorciadas}</dd>
+          <dt class="col-5">Representante</dt><dd class="col-7">${d.representante_legal}</dd>
+          <dt class="col-5">DNI/C.E.</dt><dd class="col-7">${d.dni_representante}</dd>
+          <dt class="col-5">Independiente</dt><dd class="col-7">${d.es_independiente?'Sí':'No'}</dd>
+          <dt class="col-5">Tributador</dt><dd class="col-7">${d.tributador}</dd>
+          <dt class="col-5">RUC Tributador</dt><dd class="col-7">${d.ruc_tributador}</dd>
+          ${d.es_independiente?`<dt class="col-5">RUC Consorcio</dt><dd class="col-7">${d.ruc_consorcio}</dd>`:``}
+        `);
+      }
+
+      const btnEditar = document.getElementById('btnEditar');
+      const btnEliminar = document.getElementById('btnEliminar');
+      if (btnEditar)   btnEditar.href   = d.url_editar || '#';
+      if (btnEliminar) btnEliminar.href = d.url_eliminar || '#';
+
+      const btnLiqu = document.getElementById('btnLiquidar');
+      if (btnLiqu){
+        if (d.liquidada) {
+          btnLiqu.style.display = 'none';
+        } else {
+          btnLiqu.style.display = 'inline-block';
+          btnLiqu.onclick = ev => {
+            ev.preventDefault();
+            if (confirm('⚠️ Esto es irreversible. ¿Deseas continuar y liquidar esta carta fianza?')) {
+              window.location.href = d.url_liquidar;
+            }
+          };
+        }
+      }
+
+      if (d.liquidada && d.liquidacion) {
+        det.insertAdjacentHTML('beforeend', `
+          <dt class="col-12 text-success fw-bold mt-3">Liquidación</dt>
+          <dt class="col-5">Monto devolución</dt><dd class="col-7">${Number(d.liquidacion.monto_dev).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</dd>
+          <dt class="col-5">Aseguradora</dt><dd class="col-7">${d.liquidacion.aseguradora}</dd>
+          <dt class="col-5">Fecha devolución</dt><dd class="col-7">${d.liquidacion.fecha_dev}</dd>
+          <dt class="col-5">Nº Fianza</dt><dd class="col-7">${d.liquidacion.nro_fianza}</dd>
+          <dt class="col-5">Documento</dt>
+          <dd class="col-7">
+            <a href="#"
+              class="link-primary"
+              onclick="document.getElementById('visorPdf').src='${d.liquidacion.documento}'; return false;">
+              ${d.liquidacion.doc_nombre}
+            </a>
+          </dd>
+        `);
+      }
+    }
+
+    // Rellena la lista de archivos (si el endpoint responde)
+    function renderArchivos(data){
+      const lista = document.getElementById('listaArchivos');
+      if (!lista) return;
+      lista.innerHTML = '';
+      document.getElementById('visorPdf').src = '';
+      (data?.archivos || []).forEach(a => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item list-group-item-action';
+        li.textContent = a.nombre;
+        li.style.cursor = 'pointer';
+        li.onclick = () => document.getElementById('visorPdf').src = a.url;
+        lista.appendChild(li);
+      });
+    }
+
+    // --- Abrir modal al hacer clic en una tarjeta de carta ---
+    document.addEventListener('click', async (e) => {
+      const card = e.target.closest('.carta-mini');
+      if (!card) return;
+
+      const id     = card.dataset.fianzaId;
+      const urlDet = "{% url 'carta_detalle' 0 %}".replace('/0/', `/${id}/`);
+      const urlArc = "{% url 'carta_archivos' 0 %}".replace('/0/', `/${id}/`);
+
+      try {
+        // 1) Detalle (obligatorio)
+        const r1 = await fetch(urlDet);
+        if (!r1.ok) throw new Error('DETALLE ' + r1.status);
+        const d = await r1.json();
+        renderDetalle(d);
+
+        // 2) Archivos (si falla, no bloquea el modal)
+        try {
+          const r2 = await fetch(urlArc);
+          if (r2.ok) {
+            const data = await r2.json();
+            renderArchivos(data);
+          } else {
+            console.warn('ARCHIVOS', r2.status);
+            renderArchivos({ archivos: [] });
+          }
+        } catch (e2){
+          console.warn('ARCHIVOS fetch error', e2);
+          renderArchivos({ archivos: [] });
+        }
+
+        // 3) Mostrar modal SIEMPRE que el detalle haya cargado
+        if (modal) modal.show();
+
+      } catch (err){
+        console.error(err);
+        alert('No se pudo cargar el detalle de la carta. (' + err.message + ')');
+      }
+    });
+
+    // --- Autocomplete ---
+    (function(){
+      const input = document.getElementById('searchInput');
+      const box   = document.getElementById('suggestions');
+      if (!input || !box) return;
+
+      // Cierra la lista al hacer click fuera
+      document.addEventListener('click', e => {
+        if (!box.contains(e.target) && e.target !== input) box.innerHTML = '';
+      });
+
+      input.addEventListener('input', () => {
+        const term = input.value.trim();
+        if (term.length < 2) { box.innerHTML = ''; return; }
+
+        fetch(`/empresa/autocomplete/?term=${encodeURIComponent(term)}`)
+          .then(r => {
+            if (!r.ok) throw new Error('AUTOCOMPLETE ' + r.status);
+            return r.json();
+          })
+          .then(data => {
+            box.innerHTML = '';
+            (data || []).forEach(item => {
+              const li = document.createElement('li');
+              li.className = 'list-group-item list-group-item-action';
+              li.textContent = item.label;
+              li.addEventListener('click', () => {
+                input.value = item.value;
+                box.innerHTML = '';
+                input.form.submit();
+              });
+              box.appendChild(li);
+            });
+          })
+          .catch(err => {
+            console.warn(err);
+            box.innerHTML = '';
+          });
+      });
+    })();
+
+  });
+  </script>
+{% endblock %}

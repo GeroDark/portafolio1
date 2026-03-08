@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Registrar Pago a {{ empresa.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-lg py-4">
+  <div class="mx-auto" style="max-width: 720px;">
+    <h2 class="fw-bold text-center mb-4 d-flex justify-content-center align-items-center gap-2">
+      <i class="bi bi-wallet2 text-warning" style="font-size:1.4rem;"></i>
+      Registrar&nbsp;Pago a&nbsp;{{ empresa.nombre }}
+    </h2>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4">
+        <form id="pagoRegistroForm" method="post" enctype="multipart/form-data" action="{% url 'agregar_pago_empresa' empresa.id %}">
+          {% csrf_token %}
+
+          {# ───── Errores globales ───── #}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-4">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Moneda</label>
+              {{ form.moneda }}
+              {% if form.moneda.errors %}
+                <div class="text-danger small">{{ form.moneda.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Monto Total</label>
+              {{ form.monto_total }}
+              {% if form.monto_total.errors %}
+                <div class="text-danger small">{{ form.monto_total.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Origen del pago -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Origen del pago</label>
+            {{ form.origen }}
+            {% if form.origen.errors %}<div class="text-danger small">{{ form.origen.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Vincular a Carta o Fideicomiso (se ocultan según origen) -->
+          <div id="wrap_carta" class="mb-3" style="display:none;">
+            <label class="form-label fw-semibold">Carta Fianza</label>
+            {{ form.carta }}
+            {% if form.carta.errors %}<div class="text-danger small">{{ form.carta.errors.0 }}</div>{% endif %}
+          </div>
+          <div id="wrap_fidei" class="mb-3" style="display:none;">
+            <label class="form-label fw-semibold">Fideicomiso</label>
+            {{ form.fideicomiso }}
+            {% if form.fideicomiso.errors %}<div class="text-danger small">{{ form.fideicomiso.errors.0 }}</div>{% endif %}
+          </div>
+
+          <div class="form-check form-switch mb-4">
+            {{ form.cancelado }}
+            <label class="form-check-label fw-semibold" for="id_cancelado">¿Cancelado?</label>
+            {% if form.cancelado.errors %}
+              <div class="text-danger small">{{ form.cancelado.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- BLOQUE CUANDO ESTÁ CANCELADO -->
+          <div id="pago_si" class="mb-4" style="display:none;">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Tipo de comprobante</label>
+                {{ form.tipo_comprobante }}
+                {% if form.tipo_comprobante.errors %}
+                  <div class="text-danger small">{{ form.tipo_comprobante.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Fecha de pago</label>
+                {{ form.fecha_pago }}
+                {% if form.fecha_pago.errors %}
+                  <div class="text-danger small">{{ form.fecha_pago.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOQUE ADELANTOS -->
+          <div id="pago_no" class="mb-4" style="display:none;">
+            <h6 class="mb-2 text-primary-emphasis d-flex align-items-center gap-1">
+              <i class="bi bi-fast-forward-circle"></i> Adelantos
+            </h6>
+            <div id="adelantos_group" class="mb-2"></div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="agregarAdelanto()">+ Agregar adelanto</button>
+            <input type="hidden" name="adelantos" id="input_adelantos" value="{{ form.initial.adelantos|default:'[]' }}">
+            <div id="adelantos_error" class="text-danger small" style="display:none;"></div>
+          </div>
+
+          <!-- ARCHIVOS -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold">📎 Archivos adjuntos</label>
+            <input type="file" name="adjuntos" class="form-control" multiple>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Guardar&nbsp;Pago</button>
+            <a href="{% url 'listar_empresas' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form       = document.getElementById('pagoRegistroForm');
+    const chkCancel  = document.getElementById('id_cancelado');
+    const blocSi     = document.getElementById('pago_si');
+    const blocNo     = document.getElementById('pago_no');
+    const totalInput = form.querySelector('[name="monto_total"]');
+    // ---- Origen → toggle selects
+    const selOrigen  = document.getElementById('id_origen');
+    const wrapCarta  = document.getElementById('wrap_carta');
+    const wrapFidei  = document.getElementById('wrap_fidei');
+
+    function toggleOrigen() {
+      if (!selOrigen) return;
+      const v = selOrigen.value;
+      if (v === 'CARTA') {
+        wrapCarta.style.display = 'block';
+        wrapFidei.style.display = 'none';
+        // Limpia fideicomiso al cambiar a CARTA
+        const f = document.getElementById('id_fideicomiso');
+        if (f) f.selectedIndex = 0;
+      } else if (v === 'FIDEI') {
+        wrapCarta.style.display = 'none';
+        wrapFidei.style.display = 'block';
+        // Limpia carta al cambiar a FIDEI
+        const c = document.getElementById('id_carta');
+        if (c) c.selectedIndex = 0;
+      }
+    }
+    selOrigen && selOrigen.addEventListener('change', toggleOrigen);
+    toggleOrigen();
+
+    function toggleSections () {
+      blocNo.style.display = 'block';
+      blocSi.style.display = chkCancel.checked ? 'block' : 'none';
+    }
+    chkCancel.addEventListener('change', toggleSections);
+    toggleSections();
+
+    /* ───── Adelantos dinámicos ───── */
+    const adelantosGroup = document.getElementById('adelantos_group');
+    const adelantosHidden= document.getElementById('input_adelantos');
+    const errBox         = document.getElementById('adelantos_error');
+
+    window.agregarAdelanto = function (fecha='', monto='') {
+      const row = document.createElement('div');
+      row.className = 'row g-2 align-items-center mb-2';
+      row.innerHTML = `
+        <div class="col-5"><input type="date" class="form-control" value="${fecha}" /></div>
+        <div class="col-5"><input type="number" class="form-control" step="0.01" min="0" value="${monto}" /></div>
+        <div class="col-2 text-end"><button type="button" class="btn btn-sm btn-danger"><i class="bi bi-x"></i></button></div>`;
+      row.querySelector('button').onclick = () => { row.remove(); recalcular(); };
+      row.querySelectorAll('input').forEach(inp => { inp.oninput = recalcular; inp.onchange = recalcular; });
+      adelantosGroup.appendChild(row);
+    };
+
+    function dec(v){ return new Decimal(v || 0).toDecimalPlaces(2); }
+
+    function recalcular(){
+      const total = dec(totalInput.value);
+      let suma = new Decimal(0);
+      const lista = [];
+      adelantosGroup.querySelectorAll('div.row').forEach(row => {
+        const fecha = row.querySelector('input[type="date"]').value;
+        const monto = dec(row.querySelector('input[type="number"]').value);
+        if(!monto.isZero()) suma = suma.plus(monto);
+        if(fecha) lista.push({fecha, monto: monto.toNumber()});
+      });
+      adelantosHidden.value = JSON.stringify(lista);
+      if(suma.gt(total)){
+        errBox.textContent = `La suma de adelantos (${suma.toFixed(2)}) no puede superar el total (${total.toFixed(2)}).`;
+        errBox.style.display = 'block';
+      }else{
+        errBox.style.display = 'none';
+        if(!total.isZero() && suma.eq(total)){
+          chkCancel.checked = true;
+          toggleSections();
+        }
+      }
+    }
+
+    totalInput.addEventListener('input', recalcular);
+
+    try{
+      JSON.parse(adelantosHidden.value).forEach(a=>agregarAdelanto(a.fecha,a.monto));
+    }catch(e){}
+    recalcular();
+  });
+  </script>
+{% endblock %}

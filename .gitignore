@@ -1,0 +1,34 @@
+# secretos / entorno
+.env
+*.pem
+*.key
+id_rsa*
+*.p12
+*.pfx
+
+# datos locales (NO subir)
+db.sqlite3
+*.sqlite3
+media/
+dump_*.json
+*.sql
+
+# python
+__pycache__/
+*.pyc
+venv/
+.envrc
+
+# Django
+staticfiles/
+
+# backups / artefactos del servidor (NO versionar)
+.bak/
+.rollback_safety/
+*.bak
+*.bak.*
+empresa_web_deploy.zip
+
+# dumps
+dump_sqlite.json
+dump_*.json

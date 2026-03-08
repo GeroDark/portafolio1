@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% block title %}Registrar Empresa{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">➕ Registrar Nueva Empresa</h2>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {# ──── Mostrar errores globales ──── #}
+      {% if form.errors %}
+        <div class="alert alert-danger">
+          <strong>¡Ups! Faltan datos o hay errores en el formulario:</strong>
+          <ul class="mb-0 small">
+            {# Primero los errores “no asociados” a un campo concreto #}
+            {% for err in form.non_field_errors %}
+              <li>{{ err }}</li>
+            {% endfor %}
+            {# Luego, para cada campo que tenga errores, mostramos etiqueta+mensaje #}
+            {% for field in form %}
+              {% if field.errors %}
+                <li>
+                  {{ field.label }}: {{ field.errors|join:", " }}
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <!-- ——— Casilla Consorcio ——— -->
+      <div class="form-check mb-4">
+        {{ form.es_consorcio }}
+        <label class="form-check-label" for="{{ form.es_consorcio.id_for_label }}">
+          ¿Registrar como Consorcio?
+        </label>
+      </div>
+
+
+
+      {# ────── BLOQUE NORMAL (Empresa/EIRL + Socios) ────── #}
+      <div id="empresa_fields">
+        {% for field in form %}
+          {% if field.name != 'telefono' and field.name != 'correo' and field.name != 'correo_envio' and field.name != 'socios' and field.name != 'es_consorcio' and field.name != 'nombre_consorcio' and field.name != 'tributador' and field.name != 'ruc_tributador' and field.name != 'es_independiente' and field.name != 'ruc_consorcio' and field.name != 'empresas_consorciadas' and field.name != 'representante_legal' and field.name != 'dni_representante' %}
+            <div class="mb-3">
+              {{ field.label_tag }}
+              {{ field }}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      
+        
+      
+
+        {# ──── BLOQUE SOCIOS (se oculta si es EIRL o si es consorcio) ──── #}
+        <div id="socios_block" style="display:none;">
+          <hr class="my-4">
+          <h5 class="text-success mb-3">👥 Socios</h5>
+
+          <div id="socios_group"></div>
+          <button type="button"
+                  class="btn btn-sm btn-outline-dark mt-2"
+                  onclick="agregarSocio()">+ Agregar socio</button>
+
+          {{ form.socios }}
+          <div id="socios_error"
+               class="invalid-feedback d-block"
+               style="display:none;"></div>
+        </div>
+      </div>
+
+      {# ────── BLOQUE CONSORCIO ────── #}
+      <div id="consorcio_fields" style="display:none;">
+        <hr class="my-4">
+        <h5 class="text-warning mb-3">📁 Datos del Consorcio</h5>
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.nombre_consorcio.id_for_label }}">
+            {{ form.nombre_consorcio.label }}
+          </label>
+          {{ form.nombre_consorcio }}
+          {% for e in form.nombre_consorcio.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div id="tributador_fields" style="display:none;">
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.tributador.id_for_label }}">
+              {{ form.tributador.label }}
+            </label>
+            {{ form.tributador }}
+            {% for e in form.tributador.errors %}
+              <div class="text-danger small">{{ e }}</div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.ruc_tributador.id_for_label }}">
+              {{ form.ruc_tributador.label }}
+            </label>
+            {{ form.ruc_tributador }}
+            {% for e in form.ruc_tributador.errors %}
+              <div class="text-danger small">{{ e }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="form-check mb-3">
+          {{ form.es_independiente }}
+          <label class="form-check-label" for="{{ form.es_independiente.id_for_label }}">
+            {{ form.es_independiente.label }}
+          </label>
+        </div>
+
+        <div id="ruc_consorcio_box" style="display:none;" class="mb-3">
+          <label class="form-label" for="{{ form.ruc_consorcio.id_for_label }}">
+            {{ form.ruc_consorcio.label }}
+          </label>
+          {{ form.ruc_consorcio }}
+          {% for e in form.ruc_consorcio.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Empresas Consorciadas y %</label>
+          <div id="empresas_consorciadas_group"></div>
+          <button type="button"
+                  class="btn btn-sm btn-outline-dark mt-2"
+                  onclick="agregarCampo()">+ Agregar empresa</button>
+          {{ form.empresas_consorciadas }}
+          <div class="form-text">La suma de porcentajes debe ser 100 %</div>
+          <div id="porcentaje_error" class="invalid-feedback d-block" style="display:none;"></div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.representante_legal.id_for_label }}">
+            {{ form.representante_legal.label }}
+          </label>
+          {{ form.representante_legal }}
+          {% for e in form.representante_legal.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.dni_representante.id_for_label }}">
+            {{ form.dni_representante.label }}
+          </label>
+          {{ form.dni_representante }}
+          {% for e in form.dni_representante.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ——— Campos siempre visibles ——— -->
+      <div class="mb-3">
+        {{ form.telefono.label_tag }}
+        {{ form.telefono }}
+        {% for e in form.telefono.errors %}
+          <div class="text-danger small">{{ e }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ form.correo.label_tag }}
+        {{ form.correo }}
+        {% for e in form.correo.errors %}
+          <div class="text-danger small">{{ e }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ form.correo_envio.label_tag }}
+        {{ form.correo_envio }}
+        {% for e in form.correo_envio.errors %}
+          <div class="text-danger small">{{ e }}</div>
+        {% endfor %}
+      </div>
+
+      {# ────── Botones ────── #}
+      <div class="d-flex justify-content-end mt-4 gap-2">
+        <button type="submit"
+                class="btn text-white"
+                style="background:#f26522;">
+          💾 Guardar
+        </button>
+        <a href="{% url 'listar_empresas' %}"
+           class="btn btn-outline-secondary">
+          Cancelar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Mensajes de éxito #}
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-success mt-3">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+/* ─────────── Helpers ─────────── */
+function esEirl(txt){
+  txt = (txt||'').toLowerCase();
+  return txt.includes('e.i.r.l') ||
+         txt.includes('eirl')    ||
+         txt.includes('empresa individual de responsabilidad limitada');
+}
+
+/* ─────────── Socios dinámicos ─────────── */
+function agregarSocio(n='', pct='', dni=''){
+  const cont = document.getElementById('socios_group');
+  const row  = document.createElement('div');
+  row.className = 'row g-2 mb-2 align-items-center';
+  row.innerHTML = `
+    <div class="col-md-5">
+      <input type="text" class="form-control" placeholder="Socio" value="${n}">
+    </div>
+    <div class="col-md-3">
+      <input type="number" min="0" max="100" class="form-control"
+             placeholder="%" value="${pct}" oninput="recalcular()">
+    </div>
+    <div class="col-md-3">
+      <input type="text" class="form-control" placeholder="DNI/C.E." value="${dni}">
+    </div>
+    <div class="col-md-1 text-end">
+      <button type="button" class="btn btn-danger btn-sm"
+              onclick="this.closest('.row').remove(); recalcular()">×</button>
+    </div>`;
+  cont.appendChild(row);
+  recalcular();
+}
+
+function recalcular(){
+  let total = 0, datos = [];
+  document.querySelectorAll('#socios_group .row').forEach(r => {
+    const nombre = r.children[0].querySelector('input').value.trim();
+    const pct    = parseFloat(r.children[1].querySelector('input').value)||0;
+    const dni    = r.children[2].querySelector('input').value.trim();
+    total+=pct;
+    if(nombre) datos.push(`${nombre} (${pct}%) – ${dni}`);
+  });
+  document.getElementById('id_socios').value = datos.join(', ');
+  const err = document.getElementById('socios_error');
+  if(datos.length && Math.abs(total-100)>0.01){
+    err.style.display='block';
+    err.textContent=`La suma total es ${total.toFixed(2)} %. Debe ser 100 %.`;
+  } else {
+    err.style.display='none';
+    err.textContent='';
+  }
+}
+
+/* ─────────── Consorcio dinámico ─────────── */
+function agregarCampo(nombre='', pct=''){
+  const cont = document.getElementById('empresas_consorciadas_group');
+  const div  = document.createElement('div');
+  div.className = 'input-group mb-2';
+  div.innerHTML = `
+    <input type="text" class="form-control me-2" placeholder="Empresa" value="${nombre}">
+    <input type="number" class="form-control" placeholder="%" min="0" max="100"
+           value="${pct}" oninput="validarPorcentajes()">
+    <button type="button" class="btn btn-danger"
+            onclick="this.parentNode.remove(); validarPorcentajes()">×</button>`;
+  cont.appendChild(div);
+  validarPorcentajes();
+}
+
+function validarPorcentajes(){
+  let total=0, datos=[];
+  document.querySelectorAll('#empresas_consorciadas_group .input-group')
+          .forEach(g=>{
+            const nom = g.children[0].value.trim();
+            const pct = parseFloat(g.children[1].value)||0;
+            total+=pct;
+            if(nom) datos.push(`${nom} (${pct}%)`);
+          });
+  const hidden = document.getElementById('id_empresas_consorciadas');
+  hidden.value = datos.join(', ');
+  const err = document.getElementById('porcentaje_error');
+  const ok100 = Math.abs(total-100)<0.001;
+  err.style.display = ok100?'none':'block';
+  err.textContent   = ok100?'':`La suma total es ${total.toFixed(2)} %. Debe ser 100 %.`;
+}
+
+/* ─────────── Mostrar/Ocultar bloques ─────────── */
+document.addEventListener('DOMContentLoaded', ()=>{
+  const inpNombre    = document.getElementById('id_nombre');
+  const socBlock     = document.getElementById('socios_block');
+  const chkCons      = document.getElementById('id_es_consorcio');
+  const empFields    = document.getElementById('empresa_fields');
+  const consFields   = document.getElementById('consorcio_fields');
+  const chkInd       = document.getElementById('id_es_independiente');
+  const tribBox      = document.getElementById('tributador_fields');
+  const rucBox       = document.getElementById('ruc_consorcio_box');
+
+  // Toggle Socios vs EIRL (solo en bloque normal)
+  function toggleSocios(){
+    const showSoc = !esEirl(inpNombre.value) && !chkCons.checked;
+    socBlock.style.display = showSoc?'block':'none';
+    if(!showSoc){
+      document.getElementById('id_socios').value = '';
+      document.getElementById('socios_group').innerHTML = '';
+      document.getElementById('socios_error').style.display = 'none';
+    }
+  }
+
+  // Toggle Empresa vs Consorcio
+  function toggleConsorcio(){
+    if(chkCons.checked){
+      empFields.style.display  = 'none';
+      consFields.style.display = 'block';
+    } else {
+      empFields.style.display  = 'block';
+      consFields.style.display = 'none';
+    }
+    toggleSocios();         // reajusta también socios
+    toggleTributador();     // y campos de consorcio
+  }
+
+  // Toggle campos de tributador / independiente
+  function toggleTributador(){
+    const isCons = chkCons.checked;
+    tribBox.style.display = isCons? 'block':'none';
+    rucBox.style.display  = (isCons && chkInd.checked)? 'block':'none';
+  }
+
+  inpNombre.addEventListener('input', toggleSocios);
+  chkCons .addEventListener('change', toggleConsorcio);
+  chkInd  .addEventListener('change', toggleTributador);
+
+  // Precarga (vuelta tras error)
+  if(document.getElementById('id_socios').value) {
+    document.getElementById('id_socios').value
+      .split(', ')
+      .forEach(txt=>{
+        const m = txt.match(/(.*)\s+\((\d+(?:\.\d+)?)%\)\s+–\s+(.*)/);
+        if(m) agregarSocio(m[1], m[2], m[3]);
+      });
+  }
+  if(document.getElementById('id_empresas_consorciadas').value) {
+    document.getElementById('id_empresas_consorciadas').value
+      .split(', ')
+      .forEach(txt=>{
+        const m = txt.match(/(.*)\s+\((\d+(?:\.\d+)?)%\)/);
+        if(m) agregarCampo(m[1], m[2]);
+      });
+  }
+
+  // Inicial
+  toggleConsorcio();
+  validarPorcentajes();
+  recalcular();
+});
+</script>
+{% endblock %}

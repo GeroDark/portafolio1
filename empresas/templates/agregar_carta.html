@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Agregar Carta Fianza{% endblock %}
+
+{% block content %}
+<h2 class="mb-4 text-primary-emphasis">
+  📝 Agregar Carta Fianza para <strong>{{ empresa.nombre }}</strong>
+</h2>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+    {# ───── VISOR GLOBAL DE ERRORES ───── #}
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <strong>Corrige los campos marcados:</strong>
+                <ul class="mb-0 small">
+                {# Muestra errores de campo y generales #}
+                {% for field, errors in form.errors.items %}
+                    {% for err in errors %}
+                    <li>
+                        {{ field|capfirst }}{% if field == '__all__' %} (formulario){% endif %}:
+                        {{ err }}
+                    </li>
+                    {% endfor %}
+                {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+
+
+  {# Campos que pintaremos aparte y, por tanto, se omiten en el bucle #}
+  {% with skip="aseguradora_otro tipo_carta numero_adicional tiene_consorcio es_independiente nombre_consorcio tributador ruc_tributador ruc_consorcio empresas_consorciadas representante_legal dni_representante liquidada" %}
+    {% for field in form %}
+
+      {# ─────────── 1. ASEGURADORA + “OTROS” ─────────── #}
+      {% if field.name == "aseguradora" %}
+        <div class="mb-3">
+          <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div id="aseguradora_otro_box" class="mb-3" style="display:none;">
+          <label class="form-label fw-bold" for="{{ form.aseguradora_otro.id_for_label }}">
+            Especifique la aseguradora
+          </label>
+          {{ form.aseguradora_otro }}
+          {% for e in form.aseguradora_otro.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+      {# ─────────── 2. CAMPOS A OMITIR DEL RENDER GENÉRICO ─────────── #}
+      {% elif field.name in skip %}
+        {# Se dibujan manualmente más abajo / vía JS #}
+
+      {# ─────────── 3. CAMPOS “NORMALES” ─────────── #}
+      {% else %}
+        <div class="mb-3">
+          <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# ─────────── 4. TIPO DE CARTA + N° ADICIONAL ─────────── #}
+      {% if field.name == "tipo_carta" %}
+        <div class="mb-3">
+          <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div id="adicional_box" class="mb-3" style="display:none;">
+          <label class="form-label fw-semibold" for="{{ form.numero_adicional.id_for_label }}">
+            {{ form.numero_adicional.label }}
+          </label>
+          {{ form.numero_adicional }}
+          {% for e in form.numero_adicional.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          {% if form.numero_adicional.help_text %}<div class="form-text">{{ form.numero_adicional.help_text }}</div>{% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% endwith %}
+
+  {# ───── CHECKBOX CONSORCIO ───── #}
+  <div class="form-check mb-3">
+    {{ form.tiene_consorcio }}
+    <label class="form-check-label" for="{{ form.tiene_consorcio.id_for_label }}">¿Tiene Consorcio?</label>
+    {% for e in form.tiene_consorcio.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+
+  {# ─────────── BLOQUE CONSORCIO ─────────── #}
+  <div id="consorcio_fields" style="display:none;">
+    <hr class="my-4">
+    <h5 class="mb-3 text-warning">📁 Datos del Consorcio</h5>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Nombre del Consorcio</label>
+      {{ form.nombre_consorcio }}
+    </div>
+
+    <div id="tributador_fields" style="display:none;">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Tributador</label>
+        {{ form.tributador }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">RUC Tributador</label>
+        {{ form.ruc_tributador }}
+      </div>
+    </div>
+
+    <div class="form-check mb-3">
+      {{ form.es_independiente }}
+      <label class="form-check-label" for="{{ form.es_independiente.id_for_label }}">¿Es Independiente?</label>
+    </div>
+
+    <div id="ruc_consorcio_box" style="display:none;">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">RUC Consorcio</label>
+        {{ form.ruc_consorcio }}
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Empresas Consorciadas y %</label>
+      <div id="empresas_consorciadas_group"></div>
+      <button type="button" class="btn btn-sm btn-outline-dark mt-2" onclick="agregarCampo()">+ Agregar empresa</button>
+      {{ form.empresas_consorciadas }}
+      <div class="form-text">La suma de porcentajes debe ser 100 %</div>
+      <div id="porcentaje_error" class="invalid-feedback d-block" style="display:none;"></div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Representante Legal</label>
+      {{ form.representante_legal }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold">DNI/C.E. del Representante</label>
+      {{ form.dni_representante }}
+    </div>
+  </div>
+
+  {# ─────────── ADJUNTOS ─────────── #}
+  <div class="mb-4">
+    <label class="form-label fw-semibold">📎 Subir Archivos Adjuntos</label>
+    <input type="file" name="nuevos_archivos" class="form-control" multiple>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <div class="d-flex gap-3">
+    {% if CAN_CARTAS %}
+      <button class="btn text-white" style="background:#f05523;">💾 Guardar Carta Fianza</button>
+    {% endif %}
+    <a href="{% url 'buscar_empresa' %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ---------- Funciones globales ---------- */
+function agregarCampo(nombre = '', pct = '') {
+  const cont = document.getElementById('empresas_consorciadas_group');
+  const div  = document.createElement('div');
+  div.className = 'input-group mb-2';
+  div.innerHTML = `
+    <input type="text"   class="form-control me-2" placeholder="Empresa" value="${nombre}">
+    <input type="number" class="form-control"      placeholder="%" min="0" max="100"
+           value="${pct}" oninput="validarPorcentajes()">
+    <button type="button" class="btn btn-danger"
+            onclick="this.parentNode.remove(); validarPorcentajes()">×</button>`;
+  cont.appendChild(div);
+  validarPorcentajes();
+}
+
+function validarPorcentajes() {
+  let total = 0, datos = [];
+
+  document.querySelectorAll('#empresas_consorciadas_group .input-group')
+          .forEach(g => {
+            const nom = g.children[0].value.trim();
+            const pct = parseFloat(g.children[1].value.replace(',', '.')) || 0;
+            total += pct;
+            if (nom) datos.push(`${nom} (${pct}%)`);
+          });
+
+  /* obtenemos el hidden cada vez: no dependemos de variables de otro scope */
+  const hidden = document.getElementById('id_empresas_consorciadas');
+  hidden.value = datos.join(', ');
+
+  const err   = document.getElementById('porcentaje_error');
+  const ok100 = Math.abs(total - 100) < 0.001;          // ±0,001 %
+  err.style.display = ok100 ? 'none' : 'block';
+  err.textContent   = ok100 ? '' :
+        `La suma total es ${total.toFixed(2)} %. Debe ser 100 %.`;
+}
+
+/* ---------- Lógica principal ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  /* Elementos de uso frecuente */
+  const selAseg = document.getElementById('id_aseguradora');
+  const boxAseg = document.getElementById('aseguradora_otro_box');
+  const chkCons = document.getElementById('id_tiene_consorcio');
+  const consBox = document.getElementById('consorcio_fields');
+  const tribBox = document.getElementById('tributador_fields');
+  const chkInd  = document.getElementById('id_es_independiente');
+  const rucBox  = document.getElementById('ruc_consorcio_box');
+  const tipoSel = document.getElementById('id_tipo_carta');
+  const adiBox  = document.getElementById('adicional_box');
+  const numAdi  = document.getElementById('id_numero_adicional');
+  const hiddenInput = document.getElementById('id_empresas_consorciadas');
+
+  /* --- Aseguradora “OTROS” --- */
+  function toggleAseg() {
+    boxAseg.style.display = selAseg.value === 'OTROS' ? 'block' : 'none';
+  }
+  selAseg.addEventListener('change', toggleAseg);
+  toggleAseg();
+
+  /* --- Consorcio / Tributador / RUC --- */
+  function updCons() {
+    const has = chkCons.checked;
+    consBox.style.display = tribBox.style.display = has ? 'block' : 'none';
+    rucBox .style.display = has && chkInd.checked ? 'block' : 'none';
+  }
+  chkCons.addEventListener('change', updCons);
+  chkInd .addEventListener('change', updCons);
+  updCons();
+
+  /* --- Tipo de Carta + Nº adicional --- */
+  function updAdic() {
+    const esAdi = tipoSel.value.toUpperCase().includes('ADICIONAL');
+    adiBox.style.display = esAdi ? 'block' : 'none';
+
+    const opt = tipoSel.selectedOptions[0];
+    if (!opt) return;
+    if (!opt.dataset.base) opt.dataset.base = opt.textContent;  // guarda una vez
+    const base = opt.dataset.base.trim();                       // “… ADICIONAL”
+
+    const suf = numAdi.value.trim();                            // II, V, …
+    opt.textContent = esAdi && suf ? `${base} ${suf}` : base;
+  }
+  tipoSel.addEventListener('change', updAdic);
+  numAdi .addEventListener('input',  updAdic);
+  updAdic();
+
+  /* --- Precarga empresas consorciadas (vuelta tras error) --- */
+  if (hiddenInput.value.trim()) {
+    hiddenInput.value.split(', ').forEach(txt => {
+      const m = txt.match(/(.*)\s+\((\d+(?:\.\d+)?)%\)/);
+      if (m) agregarCampo(m[1], m[2]);
+    });
+  }
+  validarPorcentajes();      // estado inicial
+});
+</script>
+{% endblock %}

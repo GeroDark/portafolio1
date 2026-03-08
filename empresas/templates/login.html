@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+{% block main_container_classes %}mt-0{% endblock %}
+{% block page_bg %}login{% endblock %}
+{% block title %}Iniciar Sesión{% endblock %}
+
+{% block content %}
+<div id="login-wrap"
+     class="d-flex justify-content-center align-items-center"
+     style="
+       min-height: calc(100vh - var(--navbar-h, 0px));
+       transform: translateY(calc(-0.5 * var(--navbar-h, 0px)));
+     ">
+  <div class="card shadow-sm" style="max-width: 400px; width: 100%;">
+    <div class="card-header text-center text-white" style="background: #F26522;">
+      🔒 <strong>Iniciar Sesión</strong>
+    </div>
+    <div class="card-body">
+      <div class="d-grid gap-2">
+        <a class="btn btn-light border w-100"
+          href="{% url 'social:begin' 'google-oauth2' %}">
+          <img src="https://developers.google.com/identity/images/g-logo.png"
+              alt="" style="height:20px;vertical-align:middle;margin-right:8px;">
+          Sign in with Google
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

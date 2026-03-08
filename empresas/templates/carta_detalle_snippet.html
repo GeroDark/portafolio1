@@ -1,0 +1,45 @@
+{% load humanize %}
+{#  templates/carta_detalle_snippet.html  #}
+<div class="mb-3">
+  <h6 class="fw-bold">
+    <i class="bi bi-shield-fill-exclamation text-danger me-1"></i>
+    Carta Fianza Nº {{ carta.numero_fianza }}
+  </h6>
+  <ul class="list-unstyled small mb-0">
+    <li><b>Aseguradora:</b> {{ carta.aseguradora }}</li>
+    <li><b>Tipo de Carta:</b> {{ carta.tipo_completo }}</li>
+    <li><b>Monto:</b> S/ {{ carta.monto|floatformat:2|intcomma }}</li>
+    <li><b>Plazo:</b> {{ carta.plazo_meses }} m / {{ carta.plazo_dias }} d</li>
+    <li><b>Vence:</b> {{ carta.fecha_vencimiento|date:"d/m/Y" }}</li>
+    <li><b>Entidad / Beneficiario:</b> {{ carta.entidad }}</li>
+  </ul>
+
+  {% if carta.tiene_consorcio %}
+    <hr class="my-2">
+    <h6 class="fw-bold"><i class="bi bi-heart-fill text-warning me-1"></i>Datos del Consorcio</h6>
+    <ul class="list-unstyled small mb-0">
+      <li><b>Nombre:</b> {{ carta.nombre_consorcio }}</li>
+      <li><b>Empresas:</b> {{ carta.empresas_consorciadas }}</li>
+      <li><b>Representante:</b> {{ carta.representante_legal }}</li>
+      <li><b>DNI/C.E.:</b> {{ carta.dni_representante }}</li>
+    </ul>
+  {% endif %}
+</div>
+
+<div class="d-grid gap-2 mb-3">
+  {% if CAN_CARTAS %}
+    <a href="{% url 'editar_carta_fianza' carta.id %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil-square me-1"></i>Editar
+    </a>
+  {% endif %}
+  {% if CAN_ALL %}
+    <a href="{% url 'eliminar_carta_fianza' carta.id %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash3 me-1"></i>Eliminar
+    </a>
+  {% endif %}
+  {% if CAN_ALL %}
+    <a href="{% url 'liquidar_carta' carta.id %}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-check2-circle me-1"></i>Liquidar
+    </a>
+  {% endif %}
+</div>

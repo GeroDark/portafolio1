@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Probar aviso de fianza{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="h4 mb-3">Enviar correo de prueba (aviso de fianza)</h1>
+  <form method="post" class="card p-3">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">ID de CartaFianza</label>
+      <input type="number" name="fianza_id" class="form-control" placeholder="Ej: 123" required>
+      <div class="form-text">Ve el ID en el listado o URL de detalle.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Enviar a</label>
+      <input type="email" name="to" class="form-control" value="{{ default_to }}" required>
+    </div>
+    <button class="btn btn-primary">Enviar ahora</button>
+  </form>
+
+  <hr class="my-4">
+
+  <p class="text-muted">
+    También puedes validar el formato sin enviar nada abriendo:
+    <code>/preview-aviso/&lt;ID&gt;/</code>
+  </p>
+</div>
+{% endblock %}

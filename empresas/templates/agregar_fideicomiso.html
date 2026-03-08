@@ -1,0 +1,594 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}➕ Agregar Fideicomiso{% endblock %}
+
+{% block content %}
+<div class="p-4" style="background-color: #fbeae5;">
+  <h2 class="mb-4 d-flex align-items-center gap-2 text-primary-emphasis">
+    <i class="bi bi-plus-lg" style="font-size:1.4rem;"></i>
+    Agregar&nbsp;Fideicomiso – <span class="fw-bold">{{ empresa.nombre }}</span>
+  </h2>
+
+  <form class="card shadow-sm border-0 p-4 fidei-form" method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    {# ───── Fieldset Datos Generales + Consorcio ───── #}
+    <fieldset>
+      <legend class="fs-6 text-secondary mb-3">Datos generales</legend>
+      <div class="row g-3 fidei-grid">
+        {# ➊ Nombre del Tributador #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.tributador_nombre.id_for_label }}">
+            {{ form.tributador_nombre.label }}
+          </label>
+          {{ form.tributador_nombre }}
+          {% for e in form.tributador_nombre.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➋ Banco del Tributador #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.tributador_banco.id_for_label }}">
+            {{ form.tributador_banco.label }}
+          </label>
+          {{ form.tributador_banco }}
+          {% for e in form.tributador_banco.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➌ Núm. Cuenta Tributador #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.tributador_nro_cuenta.id_for_label }}">
+            {{ form.tributador_nro_cuenta.label }}
+          </label>
+          {{ form.tributador_nro_cuenta }}
+          {% for e in form.tributador_nro_cuenta.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➍ Núm. Cuenta CCI #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.tributador_nro_cci.id_for_label }}">
+            {{ form.tributador_nro_cci.label }}
+          </label>
+          {{ form.tributador_nro_cci }}
+          {% for e in form.tributador_nro_cci.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➎ Entidad Ejecutora #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.entidad_ejecutora.id_for_label }}">
+            {{ form.entidad_ejecutora.label }}
+          </label>
+          {{ form.entidad_ejecutora }}
+          {% for e in form.entidad_ejecutora.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➏ Entidad Fiduciaria #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.entidad_fiduciaria.id_for_label }}">
+            {{ form.entidad_fiduciaria.label }}
+          </label>
+          {{ form.entidad_fiduciaria }}
+          {% for e in form.entidad_fiduciaria.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➐ Representante #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.representante.id_for_label }}">
+            {{ form.representante.label }}
+          </label>
+          {{ form.representante }}
+          {% for e in form.representante.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➑ Adelanto Directo (Moneda) #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.adelanto_directo_moneda.id_for_label }}">
+            {{ form.adelanto_directo_moneda.label }}
+          </label>
+          {{ form.adelanto_directo_moneda }}
+          {% for e in form.adelanto_directo_moneda.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➒ Adelanto Directo (Monto) #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.adelanto_directo_monto.id_for_label }}">
+            {{ form.adelanto_directo_monto.label }}
+          </label>
+          {{ form.adelanto_directo_monto }}
+          {% for e in form.adelanto_directo_monto.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ➓ Adelanto Materiales (Moneda) #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.adelanto_materiales_moneda.id_for_label }}">
+            {{ form.adelanto_materiales_moneda.label }}
+          </label>
+          {{ form.adelanto_materiales_moneda }}
+          {% for e in form.adelanto_materiales_moneda.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓫ Adelanto Materiales (Monto) #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.adelanto_materiales_monto.id_for_label }}">
+            {{ form.adelanto_materiales_monto.label }}
+          </label>
+          {{ form.adelanto_materiales_monto }}
+          {% for e in form.adelanto_materiales_monto.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓬ Residente de Obra #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.residente_obra.id_for_label }}">
+            {{ form.residente_obra.label }}
+          </label>
+          {{ form.residente_obra }}
+          {% for e in form.residente_obra.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓭ Estado de Ejecución #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.estado_ejecucion.id_for_label }}">
+            {{ form.estado_ejecucion.label }}
+          </label>
+          {{ form.estado_ejecucion }}
+          {% for e in form.estado_ejecucion.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓮ Modalidad de Ejecución #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.modalidad_ejecucion.id_for_label }}">
+            {{ form.modalidad_ejecucion.label }}
+          </label>
+          {{ form.modalidad_ejecucion }}
+          {% for e in form.modalidad_ejecucion.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓯ Monto Contrato (Moneda) #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.monto_contrato_moneda.id_for_label }}">
+            {{ form.monto_contrato_moneda.label }}
+          </label>
+          {{ form.monto_contrato_moneda }}
+          {% for e in form.monto_contrato_moneda.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓰ Monto Contrato (Valor) #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.monto_contrato.id_for_label }}">
+            {{ form.monto_contrato.label }}
+          </label>
+          {{ form.monto_contrato }}
+          {% for e in form.monto_contrato.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓱ Plazo de Ejecución #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.plazo_ejecucion.id_for_label }}">
+            {{ form.plazo_ejecucion.label }}
+          </label>
+          {{ form.plazo_ejecucion }}
+          {% for e in form.plazo_ejecucion.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓲ Fecha Inicio de Obra #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.fecha_inicio.id_for_label }}">
+            {{ form.fecha_inicio.label }}
+          </label>
+          {{ form.fecha_inicio }}
+          {% for e in form.fecha_inicio.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓳ Fecha Término de Obra #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <label class="form-label" for="{{ form.fecha_termino.id_for_label }}">
+            {{ form.fecha_termino.label }}
+          </label>
+          {{ form.fecha_termino }}
+          {% for e in form.fecha_termino.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# ⓴ Checkbox “Tiene consorcio” #}
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="form-check">
+            {{ form.tiene_consorcio }}
+            <label class="form-check-label" for="{{ form.tiene_consorcio.id_for_label }}">
+              {{ form.tiene_consorcio.label }}
+            </label>
+          </div>
+          {% for e in form.tiene_consorcio.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ─── Bloque Consorcio ─── #}
+      <div id="consorcio_fields" style="display:none;">
+        <hr class="my-4">
+        <h5 class="mb-3 text-warning">📁 Datos del Consorcio</h5>
+
+        {# Nombre del consorcio #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="{{ form.nombre_consorcio.id_for_label }}">
+            {{ form.nombre_consorcio.label }}
+          </label>
+          {{ form.nombre_consorcio }}
+          {% for e in form.nombre_consorcio.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# Representante Legal #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="{{ form.representante_legal.id_for_label }}">
+            {{ form.representante_legal.label }}
+          </label>
+          {{ form.representante_legal }}
+          {% for e in form.representante_legal.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# DNI/C.E. del Representante #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="{{ form.dni_representante.id_for_label }}">
+            {{ form.dni_representante.label }}
+          </label>
+          {{ form.dni_representante }}
+          {% for e in form.dni_representante.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# Checkbox “Es independiente” #}
+        <div class="form-check mb-3">
+          {{ form.es_independiente }}
+          <label class="form-check-label" for="{{ form.es_independiente.id_for_label }}">
+            {{ form.es_independiente.label }}
+          </label>
+        </div>
+
+        {# RUC del consorcio (si es independiente) #}
+        <div id="ruc_consorcio_box" style="display:none;">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="{{ form.ruc_consorcio.id_for_label }}">
+              {{ form.ruc_consorcio.label }}
+            </label>
+            {{ form.ruc_consorcio }}
+            {% for e in form.ruc_consorcio.errors %}
+              <div class="text-danger small">{{ e }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# Empresas consorciadas y % #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Empresas Consorciadas y %</label>
+
+          <div id="empresas_consorciadas_group" class="mb-2"></div>
+
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="agregarCampo()">
+            <i class="bi bi-plus-circle me-1"></i>Agregar empresa
+          </button>
+
+          <div id="porcentaje_error" class="text-danger small" style="display:none;"></div>
+          {{ form.empresas_consorciadas }}
+
+          {# errores de backend #}
+          {% for e in form.empresas_consorciadas.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+
+          {# error “en vivo” #}
+          
+
+          <div class="form-text">La suma de porcentajes debe ser 100 %</div>
+        </div>
+
+      </div>
+    </fieldset>
+
+    <hr class="my-4">
+
+
+    {# ─── Fieldset Adelantos ─── #}
+    <fieldset>
+      <legend class="fs-6 fw-bold text-success mb-2">
+        <i class="bi bi-cash-coin me-1"></i> Sustentos del Pago
+        <span class="ms-2 small text-muted">
+          Restante: <span id="resta-pendiente">S/ 0.00</span>
+        </span>
+      </legend>
+      <div class="row g-3 align-items-end mb-3">
+        {# Moneda de los pagos #}
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.deuda_total_moneda.id_for_label }}">
+            {{ form.deuda_total_moneda.label }}
+          </label>
+          {{ form.deuda_total_moneda }}
+          {% for e in form.deuda_total_moneda.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {# Deuda total #}
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.deuda_total.id_for_label }}">Deuda total</label>
+          {{ form.deuda_total }}
+          {% for e in form.deuda_total.errors %}
+            <div class="small text-danger">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {{ adelanto_fs.management_form }}
+        <div id="adelantos-wrapper" class="vstack gap-2 mb-2 overflow-auto">
+          {% for f in adelanto_fs %}
+            <div class="row g-2 align-items-center adel-form">
+              {{ f.id }}
+              <div class="col-md-4">{{ f.fecha }}</div>
+              <div class="col-md-4">{{ f.monto }}</div>
+              <div class="col-auto del-col">{{ f.DELETE }}<small>Eliminar</small></div>
+            </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="add-adel">
+          <i class="bi bi-plus-circle me-1"></i>Agregar adelanto
+        </button>
+        <div id="adel-error" class="small text-danger d-none"></div>
+
+        {% with adelanto_fs.empty_form as a_empty %}
+          <div class="row g-2 align-items-center adel-form d-none empty-adel">
+            {{ a_empty.id }}
+            <div class="col-md-4">{{ a_empty.fecha }}</div>
+            <div class="col-md-4">{{ a_empty.monto }}</div>
+            <div class="col-auto del-col">{{ a_empty.DELETE }}<small>Eliminar</small></div>
+          </div>
+        {% endwith %}
+      </div>
+    </fieldset>
+
+    <hr class="my-4">
+
+    {# ─── Fieldset Documentos ─── #}
+    <fieldset>
+      <legend class="fs-6 fw-bold text-info mb-2">
+        <i class="bi bi-paperclip me-1"></i> Documentos
+      </legend>
+      <p class="small text-muted">Curva S, Desembolsos mensuales, Plan de utilización, etc.</p>
+
+      {{ docs_fs.management_form }}
+      <div id="docs-wrapper" class="vstack gap-2 mb-2 overflow-auto">
+        {% for f in docs_fs %}
+          <div class="d-flex gap-2 align-items-center doc-form">
+            {{ f.id }} {{ f.categoria }} {{ f.archivo }}
+            <div class="del-col">{{ f.DELETE }}<small>Eliminar</small></div>
+          </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn btn-outline-secondary btn-sm add-doc">
+        <i class="bi bi-plus-circle me-1"></i>Otro documento
+      </button>
+
+      {% with docs_fs.empty_form as d_empty %}
+        <div class="d-flex gap-2 align-items-center doc-form d-none empty-doc">
+          {{ d_empty.id }} {{ d_empty.categoria }} {{ d_empty.archivo }}
+          <div class="del-col">{{ d_empty.DELETE }}<small>Eliminar</small></div>
+        </div>
+      {% endwith %}
+    </fieldset>
+
+    <hr class="my-4">
+
+    {% if CAN_FIDEI %}
+      <button type="submit" class="btn btn-lg text-white" style="background:#f05523;">
+        <i class="bi bi-save me-1"></i>Guardar Fideicomiso
+      </button>
+    {% endif %}
+    <a href="{% url 'buscar_empresa' %}" class="btn btn-lg btn-outline-secondary ms-2">Cancelar</a>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+  .fidei-form {
+    background-color: #ffffff;
+    border-radius: .5rem;
+  }
+  .fidei-form label {
+    font-size: .85rem;
+    font-weight: 600;
+  }
+  .fidei-form .form-control,
+  .fidei-form .form-select {
+    font-size: .85rem;
+    border-radius: .45rem;
+  }
+  @media(min-width:576px) {
+    .fidei-grid > * { flex: 0 0 50%; max-width: 50%; }
+  }
+  @media(min-width:768px) {
+    .fidei-grid > * { flex: 0 0 33.333%; max-width: 33.333%; }
+  }
+  @media(min-width:992px) {
+    .fidei-grid > * { flex: 0 0 25%; max-width: 25%; }
+  }
+  .del-col {
+    width: 5rem;
+    text-align: center;
+  }
+  .del-col small {
+    font-size: .7rem;
+    white-space: nowrap;
+  }
+  
+  #adelantos-wrapper > .row,
+  #docs-wrapper > .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/decimal.js@10"></script>
+<script>
+  /* Clonar prototipos para filas dinámicas (adelantos/docs) */
+  function clone(sel, idx) {
+    const n = document.querySelector(sel).cloneNode(true);
+    n.classList.remove('d-none','empty-adel','empty-doc');
+    n.innerHTML = n.innerHTML.replace(/__prefix__/g, idx);
+    return n;
+  }
+  function getIdx(id) {
+    const el = document.getElementById(id);
+    return el ? parseInt(el.value, 10) : 0;
+  }
+
+  /* ADELANTOS */
+  let adelIdx = getIdx('id_adels-TOTAL_FORMS');
+  const totalAdels = document.getElementById('id_adels-TOTAL_FORMS');
+  const deudaInp   = document.getElementById('{{ form.deuda_total.id_for_label }}');
+  const restaTxt   = document.getElementById('resta-pendiente');
+  const adelWrap   = document.getElementById('adelantos-wrapper');
+
+  document.getElementById('add-adel').onclick = () => {
+    const row = clone('.empty-adel', adelIdx);
+    adelWrap.appendChild(row);
+    totalAdels.value = ++adelIdx;
+    recalc();
+  };
+
+  function recalc() {
+    const total = new Decimal(deudaInp?.value || 0);
+    let suma = new Decimal(0);
+    adelWrap?.querySelectorAll('input[name$="-monto"]').forEach(i => {
+      suma = suma.plus(new Decimal(i.value || 0));
+    });
+    const restante = total.minus(suma).toFixed(2);
+    if (restaTxt) restaTxt.textContent = `S/ ${restante}`;
+
+    const errBox = document.getElementById('adel-error');
+    if (errBox) {
+      if (suma.gt(total)) {
+        errBox.textContent = "La suma de adelantos supera la deuda";
+        errBox.classList.remove('d-none');
+      } else {
+        errBox.classList.add('d-none');
+        errBox.textContent = "";
+      }
+    }
+  }
+  if (deudaInp) deudaInp.oninput = recalc;
+  if (adelWrap) adelWrap.oninput = recalc;
+  recalc();
+
+  /* DOCUMENTOS */
+  let docIdx = getIdx('id_docs-TOTAL_FORMS');
+  const addDocBtn = document.querySelector('.add-doc');
+  if (addDocBtn) {
+    addDocBtn.onclick = () => {
+      const row = clone('.empty-doc', docIdx);
+      document.getElementById('docs-wrapper').appendChild(row);
+      document.getElementById('id_docs-TOTAL_FORMS').value = ++docIdx;
+    };
+  }
+
+  /* Mostrar/Ocultar Consorcio y RUC */
+  document.addEventListener('DOMContentLoaded', function() {
+    const hiddenInput = document.getElementById('id_empresas_consorciadas');
+
+    window.validarPorcentajes = function() {
+      if (!hiddenInput) return;
+      let total = 0, datos = [];
+      document.querySelectorAll('#empresas_consorciadas_group .input-group').forEach(g => {
+        const nom = g.children[0].value.trim();
+        const pct = parseFloat(g.children[1].value.replace(',', '.')) || 0;
+        total += pct;
+        if (nom) datos.push(`${nom} (${pct}%)`);
+      });
+      hiddenInput.value = datos.join(', ');
+      const err = document.getElementById('porcentaje_error');
+      const ok100 = Math.abs(total - 100) < 0.001;
+      if (err) {
+        err.style.display = ok100 ? 'none' : 'block';
+        err.textContent = ok100 ? '' : `La suma es ${total.toFixed(2)} %. Debe ser 100 %.`;
+      }
+    };
+
+    window.agregarCampo = function(nombre = '', pct = '') {
+      const cont = document.getElementById('empresas_consorciadas_group');
+      if (!cont) return;
+      const div = document.createElement('div');
+      div.className = 'input-group mb-2';
+      div.innerHTML = `
+        <input type="text" class="form-control me-2" placeholder="Empresa" value="${nombre}"
+              oninput="validarPorcentajes()">
+        <input type="number" class="form-control" placeholder="%" min="0" max="100" step="0.01" value="${pct}"
+              oninput="validarPorcentajes()">
+        <button type="button" class="btn btn-danger"
+                onclick="this.parentNode.remove(); validarPorcentajes()">×</button>`;
+      cont.appendChild(div);
+      validarPorcentajes();
+    };
+
+    const chkCons = document.getElementById('id_tiene_consorcio');
+    const consFields = document.getElementById('consorcio_fields');
+    function toggleConsorcio(){ if (chkCons && consFields) consFields.style.display = chkCons.checked ? 'block' : 'none'; }
+    if (chkCons) { chkCons.addEventListener('change', toggleConsorcio); toggleConsorcio(); }
+
+    const chkInd = document.getElementById('id_es_independiente');
+    const rucBox = document.getElementById('ruc_consorcio_box');
+    function toggleRuc(){ if (chkInd && rucBox) rucBox.style.display = chkInd.checked ? 'block' : 'none'; }
+    if (chkInd) { chkInd.addEventListener('change', toggleRuc); toggleRuc(); }
+
+    if (hiddenInput && hiddenInput.value.trim()) {
+      hiddenInput.value.split(', ').forEach(txt => {
+        const m = txt.match(/(.*)\s+\((\d+(?:\.\d+)?)%\)/);
+        if (m) agregarCampo(m[1], m[2]);
+      });
+      validarPorcentajes();
+    }
+  });
+</script>
+{% endblock %}

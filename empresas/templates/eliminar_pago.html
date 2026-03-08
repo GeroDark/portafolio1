@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Confirmar eliminación del pago{% endblock %}
+
+{% block content %}
+<div class="alert alert-danger">
+  <h4 class="alert-heading">⚠️ Confirmar eliminación del pago</h4>
+  <p>¿Estás seguro de que deseas <span class="text-danger">eliminar</span> el pago registrado el
+    <strong>{{ pago.created_at|date:"d/m/Y H:i" }}</strong>
+    para la empresa <strong>{{ pago.empresa.nombre }}</strong>?
+  </p>
+  <p class="border-start border-4 border-warning ps-3">
+    Esta acción <strong>no se puede deshacer</strong> y eliminará todos los adelantos y documentos relacionados.
+  </p>
+  <form method="post" action="">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">
+      🗑️ Sí, eliminar permanentemente
+    </button>
+    <a href="{% url 'listar_empresas' %}" class="btn btn-secondary">
+      ❌ Cancelar y volver
+    </a>
+  </form>
+</div>
+{% endblock %}

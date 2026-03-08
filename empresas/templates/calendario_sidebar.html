@@ -1,0 +1,61 @@
+{% load cie_extras %}   {#  <--  NECESARIO para usar |replace  #}
+
+{# =========  BARRA LATERAL (vencidas y próximas)  ========= #}
+
+<!-- ─────  CARTAS VENCIDAS  ───── -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header py-2 fw-bold text-white" style="background:#C82333;">
+    ⚠ Vencidas
+  </div>
+  <ul class="list-group list-group-flush small">
+    {% for f in vencidas %}
+      {% with f_fecha=f.fecha_vencimiento %}
+      {% with f_mes=f_fecha|date:"Y-m" f_dia=f_fecha|date:"Y-m-d" %}
+        <li class="list-group-item p-0 border-0">
+          {% if f_mes == mes_actual %}
+            <a href="#dia-{{ f_dia }}" class="d-block text-decoration-none text-dark py-2 px-3">
+          {% else %}
+            <a href="?m={{ f_mes }}#dia-{{ f_dia }}" class="d-block text-decoration-none text-dark py-2 px-3">
+          {% endif %}
+              {{ f_fecha|date:"d/m/Y" }}<br>
+              <span class="fst-italic">
+                {{ f.numero_fianza }} – {{ f.aseguradora }} – {{ f.tipo_carta|upper|replace:"_> " }}
+              </span>
+            </a>
+        </li>
+      {% endwith %}
+      {% endwith %}
+    {% empty %}
+      <li class="list-group-item text-muted">Sin vencidas</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<!-- ─────  PRÓXIMOS 30 DÍAS  ───── -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header py-2 fw-bold text-dark" style="background:#FFC107;">
+    ⏰ Próximos 30 días
+  </div>
+  <ul class="list-group list-group-flush small">
+    {% for f in proximas %}
+      {% with f_fecha=f.fecha_vencimiento %}
+      {% with f_mes=f_fecha|date:"Y-m" f_dia=f_fecha|date:"Y-m-d" %}
+        <li class="list-group-item p-0 border-0">
+          {% if f_mes == mes_actual %}
+            <a href="#dia-{{ f_dia }}" class="d-block text-decoration-none text-dark py-2 px-3">
+          {% else %}
+            <a href="?m={{ f_mes }}#dia-{{ f_dia }}" class="d-block text-decoration-none text-dark py-2 px-3">
+          {% endif %}
+              {{ f_fecha|date:"d/m/Y" }}<br>
+              <span class="fst-italic">
+                {{ f.numero_fianza }} – {{ f.aseguradora }} – {{ f.tipo_carta|upper|replace:"_> " }}
+              </span>
+            </a>
+        </li>
+      {% endwith %}
+      {% endwith %}
+    {% empty %}
+      <li class="list-group-item text-muted">Sin próximas</li>
+    {% endfor %}
+  </ul>
+</div>
