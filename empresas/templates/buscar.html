@@ -288,13 +288,14 @@
   <div class="alert alert-danger">❌ No se encontró ninguna empresa con ese criterio.</div>
 {% endif %}
 
-{% if CAN_PAGOS %}
+{% if CAN_ALL or CAN_NOTIF or CAN_CARTAS or CAN_FIDEI %}
   <div class="mt-5 text-center">
-    <a href="{% url 'registrar_empresa' %}" class="btn btn-lg rounded-pill text-white px-4" style="background:#F26522;">🏢 Registrar nueva empresa</a>
+    <a href="{% url 'registrar_empresa' %}" class="btn btn-lg rounded-pill text-white px-4" style="background:#F26522;">
+      🏢 Agregar nueva empresa o consorcio
+    </a>
   </div>
 {% endif %}
 {% endblock %}
-
 
 {% block extra_js %}
   {{ block.super }}
