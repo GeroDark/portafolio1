@@ -119,11 +119,11 @@
                     {% endif %}
 
                     <!-- Calendario (pedido: visible para TODOS los roles por ahora) -->
-                    {% if CAN_CARTAS or CAN_FIDEI or CAN_PAGOS %}
+                    {% if CAN_CARTAS or CAN_PAGOS %}
                         <li class="nav-item me-2">
                         <a class="btn {% if request.path == '/calendario/' %}btn-light active{% else %}btn-outline-light{% endif %}"
                             href="{% url 'calendario_fianzas' %}">
-                            📅 Calendario
+                            📅 Calendario Cartas Fianza
                         </a>
                         </li>
                     {% endif %}
