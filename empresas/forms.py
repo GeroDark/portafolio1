@@ -107,6 +107,7 @@ class EmpresaForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+
         if cleaned.get('es_consorcio'):
             for campo in ('ruc', 'dni_gerente', 'socios'):
                 if campo in self._errors:
@@ -124,26 +125,36 @@ class EmpresaForm(forms.ModelForm):
                 elif not suma_porcentajes(socios_txt):
                     self.add_error('socios', 'La suma de porcentajes debe ser exactamente 100 %.')
             else:
-                # si es EIRL, lo vaciamos
                 cleaned['socios'] = ''
         else:
-            # si es Consorcio, borramos cualquier valor viejo
             cleaned['socios'] = ''
 
         # ——— Validación de los datos de consorcio ———
         if cleaned.get('es_consorcio'):
-            # nombre del consorcio obligatorio
             if not cleaned.get('nombre_consorcio', '').strip():
                 self.add_error('nombre_consorcio', 'Debe indicar el nombre del consorcio.')
+
+            ruc_tributador = (cleaned.get('ruc_tributador') or '').strip()
+
+            if not ruc_tributador:
+                self.add_error('ruc_tributador', 'Debe indicar el RUC del tributador.')
+            elif not re.match(r'^\d{11}$', ruc_tributador):
+                self.add_error('ruc_tributador', 'El RUC del tributador debe tener exactamente 11 dígitos numéricos.')
+            elif Empresa.objects.filter(ruc=ruc_tributador).exclude(id=self.instance.id).exists():
+                self.add_error('ruc_tributador', 'Ya existe una empresa con este RUC.')
+            else:
+                # El RUC principal de la empresa será el RUC del tributador
+                cleaned['ruc'] = ruc_tributador
+
             # si NO es independiente, valida empresas_consorciadas = 100%
             if not cleaned.get('es_independiente'):
                 txt = (cleaned.get('empresas_consorciadas') or '').strip()
                 if not txt:
                     self.add_error('empresas_consorciadas',
-                                   'Debe ingresar las empresas y porcentajes.')
+                                'Debe ingresar las empresas y porcentajes.')
                 elif not suma_porcentajes(txt):
                     self.add_error('empresas_consorciadas',
-                                   'La suma de porcentajes debe ser exactamente 100 %.')
+                                'La suma de porcentajes debe ser exactamente 100 %.')
         else:
             # limpiar automáticamente si no es consorcio
             for fld in (
@@ -152,15 +163,16 @@ class EmpresaForm(forms.ModelForm):
                 'empresas_consorciadas', 'representante_legal',
                 'dni_representante',
             ):
-                # booleans → False, strings → ''
                 cleaned[fld] = False if isinstance(self.fields[fld], forms.BooleanField) else ''
 
         return cleaned
 
     def clean_ruc(self):
         if self.cleaned_data.get('es_consorcio'):
-            return self.cleaned_data.get('ruc','')
-        ruc = self.cleaned_data['ruc']
+            # Para consorcio, el RUC principal será el del tributador
+            return (self.data.get('ruc_tributador') or '').strip()
+
+        ruc = (self.cleaned_data.get('ruc') or '').strip()
         if not re.match(r'^\d{11}$', ruc):
             raise ValidationError('El RUC debe tener exactamente 11 dígitos numéricos.')
         if Empresa.objects.filter(ruc=ruc).exclude(id=self.instance.id).exists():
@@ -180,6 +192,17 @@ class EmpresaForm(forms.ModelForm):
         if not dni.isdigit():
             raise ValidationError('El DNI/C.E. debe contener solo números.')
         return dni
+    
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+
+        if obj.es_consorcio:
+            obj.ruc = (obj.ruc_tributador or '').strip()
+
+        if commit:
+            obj.save()
+
+        return obj
 
 
 # ─────────────────────────────

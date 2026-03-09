@@ -88,13 +88,28 @@
             </div>
           </div>
           <div class="card-body">
-            <p><strong>RUC:</strong> {{ seleccionada.ruc }}</p>
-            <p><strong>Nombre:</strong> {{ seleccionada.nombre }}</p>
-            <p><strong>Nombre del Gerente:</strong> {{ seleccionada.nombre_gerente }}</p>
-            <p><strong>DNI/C.E. del Gerente:</strong> {{ seleccionada.dni_gerente }}</p>
-            <p><strong>Teléfono:</strong> {{ seleccionada.telefono|default:"—" }}</p>
-            <p><strong>Correo:</strong> {{ seleccionada.correo|default:"—" }}</p>
-            <p><strong>Correo de envío:</strong> {{ seleccionada.correo_envio|default:"—" }}</p>
+            {% if seleccionada.es_consorcio %}
+              <p><strong>Nombre del Consorcio:</strong> {{ seleccionada.nombre_consorcio|default:"—" }}</p>
+              <p><strong>Tributador:</strong> {{ seleccionada.tributador|default:"—" }}</p>
+              <p><strong>RUC Tributador:</strong> {{ seleccionada.ruc_tributador|default:"—" }}</p>
+              <p><strong>Es independiente:</strong> {{ seleccionada.es_independiente|yesno:"Sí,No" }}</p>
+              <p><strong>RUC Consorcio:</strong> {{ seleccionada.ruc_consorcio|default:"—" }}</p>
+              <p><strong>Empresas Consorciadas y %:</strong> {{ seleccionada.empresas_consorciadas|default:"—" }}</p>
+              <p><strong>Representante Legal:</strong> {{ seleccionada.representante_legal|default:"—" }}</p>
+              <p><strong>DNI/C.E. del Representante:</strong> {{ seleccionada.dni_representante|default:"—" }}</p>
+              <p><strong>RUC principal:</strong> {{ seleccionada.ruc|default:"—" }}</p>
+              <p><strong>Teléfono:</strong> {{ seleccionada.telefono|default:"—" }}</p>
+              <p><strong>Correo:</strong> {{ seleccionada.correo|default:"—" }}</p>
+              <p><strong>Correo de envío:</strong> {{ seleccionada.correo_envio|default:"—" }}</p>
+            {% else %}
+              <p><strong>RUC:</strong> {{ seleccionada.ruc }}</p>
+              <p><strong>Nombre:</strong> {{ seleccionada.nombre }}</p>
+              <p><strong>Nombre del Gerente:</strong> {{ seleccionada.nombre_gerente }}</p>
+              <p><strong>DNI/C.E. del Gerente:</strong> {{ seleccionada.dni_gerente }}</p>
+              <p><strong>Teléfono:</strong> {{ seleccionada.telefono|default:"—" }}</p>
+              <p><strong>Correo:</strong> {{ seleccionada.correo|default:"—" }}</p>
+              <p><strong>Correo de envío:</strong> {{ seleccionada.correo_envio|default:"—" }}</p>
+            {% endif %}
           </div>
         </div>
         {# ────────────────────────────────────────────────────────────────────────── #}

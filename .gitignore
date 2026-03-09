@@ -13,6 +13,10 @@ media/
 dump_*.json
 *.sql
 
+env/
+.venv/
+venv/
+
 # python
 __pycache__/
 *.pyc
@@ -32,3 +36,4 @@ empresa_web_deploy.zip
 # dumps
 dump_sqlite.json
 dump_*.json
+

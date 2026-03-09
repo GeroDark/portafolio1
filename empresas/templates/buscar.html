@@ -45,9 +45,15 @@
     </div>
     <div class="card-body small">
       {% if resultado.es_consorcio %}
-        <p><b>Nombre del Consorcio:</b> {{ resultado.nombre_consorcio }}</p>
-        <p><b>Representante Legal:</b> {{ resultado.representante_legal }}</p>
-        <p><b>DNI/C.E. del Representante:</b> {{ resultado.dni_representante }}</p>
+        <p><b>Nombre del Consorcio:</b> {{ resultado.nombre_consorcio|default:"—" }}</p>
+        <p><b>Tributador:</b> {{ resultado.tributador|default:"—" }}</p>
+        <p><b>RUC Tributador:</b> {{ resultado.ruc_tributador|default:"—" }}</p>
+        <p><b>Es independiente:</b> {{ resultado.es_independiente|yesno:"Sí,No" }}</p>
+        <p><b>RUC Consorcio:</b> {{ resultado.ruc_consorcio|default:"—" }}</p>
+        <p><b>Empresas Consorciadas y %:</b> {{ resultado.empresas_consorciadas|default:"—" }}</p>
+        <p><b>Representante Legal:</b> {{ resultado.representante_legal|default:"—" }}</p>
+        <p><b>DNI/C.E. del Representante:</b> {{ resultado.dni_representante|default:"—" }}</p>
+        <p><b>RUC principal:</b> {{ resultado.ruc|default:"—" }}</p>
       {% else %}
         <p><b>RUC:</b> {{ resultado.ruc }}</p>
         <p><b>Nombre:</b> {{ resultado.nombre }}</p>
