@@ -34,6 +34,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError, SuspiciousFileOperation
+from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Prefetch
 from django.http import JsonResponse, FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -320,12 +321,14 @@ def registrar_empresa(request):
 @role_required("master", "notifier", "cartas", "fidei")
 def listar_empresas(request):
     q = request.GET.get('q', '').strip()
+    ep = request.GET.get("ep", 1)  # página empresas
+    cp = request.GET.get("cp", 1)  # página consorcios
 
     # --- Flags por rol (coherentes con tu context processor) ---
     role = get_role(getattr(request, "user", None))
-    SHOW_CARTA_PAGOS = can_all(role) or can_cartas(role)   # master/notif o cartas
-    SHOW_FIDEI_PAGOS = can_all(role) or can_fidei(role)    # master/notif o fidei
-    CAN_DELETE_ANY   = can_all(role)                       # solo master/notif
+    SHOW_CARTA_PAGOS = can_all(role) or can_cartas(role)
+    SHOW_FIDEI_PAGOS = can_all(role) or can_fidei(role)
+    CAN_DELETE_ANY   = can_all(role)
 
     # 1) Prefetch de pagos (evita N+1)
     base_qs = (
@@ -338,8 +341,12 @@ def listar_empresas(request):
             )
         )
     )
-    empresas   = base_qs.filter(es_consorcio=False)
-    consorcios = base_qs.filter(es_consorcio=True)
+
+    empresas_qs = base_qs.filter(es_consorcio=False).order_by("nombre", "id")
+    consorcios_qs = base_qs.filter(es_consorcio=True).order_by("nombre_consorcio", "id")
+
+    empresas = Paginator(empresas_qs, 5).get_page(ep)
+    consorcios = Paginator(consorcios_qs, 5).get_page(cp)
 
     # 2) Empresa seleccionada (buscador superior)
     seleccionada = None
@@ -372,28 +379,45 @@ def listar_empresas(request):
             return [p for p in lista if p.origen == "FIDEI"]
         return []
 
-    for e in empresas:
+    def _page_numbers(page_obj, window=2):
+        total = page_obj.paginator.num_pages
+        current = page_obj.number
+
+        raw = {1, total}
+        raw.update(range(max(1, current - window), min(total, current + window) + 1))
+        ordered = sorted(raw)
+
+        result = []
+        prev = None
+        for num in ordered:
+            if prev is not None and num - prev > 1:
+                result.append(None)  # muestra "..."
+            result.append(num)
+            prev = num
+        return result
+
+    for e in empresas.object_list:
         lista = getattr(e, "pagos_list", [])
         e.pagos_visibles = _filtra(lista)
-        e.pagos_count    = len(e.pagos_visibles)
+        e.pagos_count = len(e.pagos_visibles)
 
-    for c in consorcios:
+    for c in consorcios.object_list:
         lista = getattr(c, "pagos_list", [])
         c.pagos_visibles = _filtra(lista)
-        c.pagos_count    = len(c.pagos_visibles)
+        c.pagos_count = len(c.pagos_visibles)
 
-    # 5) Render: pasar flags que la plantilla usa para ocultar (bloques y botones)
     return render(request, "listar_empresas.html", {
         "empresas": empresas,
         "consorcios": consorcios,
+        "empresas_page_numbers": _page_numbers(empresas),
+        "consorcios_page_numbers": _page_numbers(consorcios),
         "busqueda": q,
         "seleccionada": seleccionada,
         "pagos_cartas": pagos_cartas,
         "pagos_fidei": pagos_fidei,
-
         "SHOW_CARTA_PAGOS": SHOW_CARTA_PAGOS,
         "SHOW_FIDEI_PAGOS": SHOW_FIDEI_PAGOS,
-        "CAN_DELETE_ANY":   CAN_DELETE_ANY,
+        "CAN_DELETE_ANY": CAN_DELETE_ANY,
     })
 
 @login_required

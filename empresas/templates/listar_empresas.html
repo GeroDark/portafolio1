@@ -379,6 +379,69 @@
     </table>
   </div>
 
+  {% if empresas.paginator.num_pages %}
+    <div class="d-flex justify-content-center mt-3 mb-4">
+      <nav aria-label="Paginación de empresas">
+        <ul class="pagination pagination-sm flex-wrap mb-0 shadow-sm">
+
+          {% if empresas.has_previous %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#f05523; border-color:#f05523;"
+                href="?ep={{ empresas.previous_page_number }}&cp={{ consorcios.number }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}"
+              >
+                Anterior
+              </a>
+            </li>
+          {% endif %}
+
+          {% for num in empresas_page_numbers %}
+            {% if num %}
+              {% if num == empresas.number %}
+                <li class="page-item active">
+                  <span
+                    class="page-link"
+                    style="background-color:#f05523; border-color:#f05523; color:#fff; font-weight:600;"
+                  >
+                    {{ num }}
+                  </span>
+                </li>
+              {% else %}
+                <li class="page-item">
+                  <a
+                    class="page-link"
+                    style="color:#f05523; border-color:#f05523;"
+                    href="?ep={{ num }}&cp={{ consorcios.number }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}"
+                  >
+                    {{ num }}
+                  </a>
+                </li>
+              {% endif %}
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link" style="color:#999;">…</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if empresas.has_next %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#f05523; border-color:#f05523;"
+                href="?ep={{ empresas.next_page_number }}&cp={{ consorcios.number }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}"
+              >
+                Siguiente
+              </a>
+            </li>
+          {% endif %}
+
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+
   <!-- ────────── Modal para Editar Pago ────────── -->
   <div class="modal fade" id="editarPagoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -537,8 +600,72 @@
     </table>
   </div>
 
+  {% if consorcios.paginator.num_pages %}
+    <div class="d-flex justify-content-center mt-3 mb-4">
+      <nav aria-label="Paginación de consorcios">
+        <ul class="pagination pagination-sm flex-wrap mb-0 shadow-sm">
+
+          {% if consorcios.has_previous %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#9a6b00; border-color:#d6a300;"
+                href="?ep={{ empresas.number }}&cp={{ consorcios.previous_page_number }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}"
+              >
+                Anterior
+              </a>
+            </li>
+          {% endif %}
+
+          {% for num in consorcios_page_numbers %}
+            {% if num %}
+              {% if num == consorcios.number %}
+                <li class="page-item active">
+                  <span
+                    class="page-link"
+                    style="background-color:#ffc107; border-color:#d6a300; color:#3b2a00; font-weight:600;"
+                  >
+                    {{ num }}
+                  </span>
+                </li>
+              {% else %}
+                <li class="page-item">
+                  <a
+                    class="page-link"
+                    style="color:#9a6b00; border-color:#d6a300;"
+                    href="?ep={{ empresas.number }}&cp={{ num }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}"
+                  >
+                    {{ num }}
+                  </a>
+                </li>
+              {% endif %}
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link" style="color:#999;">…</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if consorcios.has_next %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#9a6b00; border-color:#d6a300;"
+                href="?ep={{ empresas.number }}&cp={{ consorcios.next_page_number }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}"
+              >
+                Siguiente
+              </a>
+            </li>
+          {% endif %}
+
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
 
 {% endblock %}
+
+
 
 {% block extra_js %}
   {{ block.super }}
