@@ -41,7 +41,7 @@
       {# ────── BLOQUE NORMAL (Empresa/EIRL + Socios) ────── #}
       <div id="empresa_fields">
         {% for field in form %}
-          {% if field.name != 'telefono' and field.name != 'correo' and field.name != 'correo_envio' and field.name != 'socios' and field.name != 'es_consorcio' and field.name != 'nombre_consorcio' and field.name != 'tributador' and field.name != 'ruc_tributador' and field.name != 'es_independiente' and field.name != 'ruc_consorcio' and field.name != 'empresas_consorciadas' and field.name != 'representante_legal' and field.name != 'dni_representante' %}
+          {% if field.name != 'telefono' and field.name != 'correo' and field.name != 'correo_envio' and field.name != 'observaciones' and field.name != 'socios' and field.name != 'es_consorcio' and field.name != 'nombre_consorcio' and field.name != 'tributador' and field.name != 'ruc_tributador' and field.name != 'es_independiente' and field.name != 'ruc_consorcio' and field.name != 'empresas_consorciadas' and field.name != 'representante_legal' and field.name != 'dni_representante' %}
             <div class="mb-3">
               {{ field.label_tag }}
               {{ field }}
@@ -159,9 +159,37 @@
         {% endfor %}
       </div>
       <div class="mb-3">
-        {{ form.correo_envio.label_tag }}
-        {{ form.correo_envio }}
+        <label for="correo_envio_1" class="form-label">Correo de envío</label>
+        <input
+          type="email"
+          id="correo_envio_1"
+          class="form-control"
+          placeholder="notificaciones@ejemplo.com (opcional)"
+        >
         {% for e in form.correo_envio.errors %}
+          <div class="text-danger small">{{ e }}</div>
+        {% endfor %}
+      </div>
+
+      <div id="correos-envio-adicionales"></div>
+
+      <div class="mb-3">
+        <button type="button"
+                class="btn btn-sm btn-outline-dark"
+                id="btn-add-correo-extra">
+          + Agregar correo de envío adicional
+        </button>
+      </div>
+
+      {{ form.correo_envio }}
+
+      <div class="mb-3">
+        {{ form.observaciones.label_tag }}
+        {{ form.observaciones }}
+        {% if form.observaciones.help_text %}
+          <div class="form-text">{{ form.observaciones.help_text }}</div>
+        {% endif %}
+        {% for e in form.observaciones.errors %}
           <div class="text-danger small">{{ e }}</div>
         {% endfor %}
       </div>
@@ -277,6 +305,91 @@ function validarPorcentajes(){
   err.textContent   = ok100?'':`La suma total es ${total.toFixed(2)} %. Debe ser 100 %.`;
 }
 
+/* ─────────── Correos de envío dinámicos ─────────── */
+function inicializarCorreosEnvio(){
+  const form = document.querySelector('form');
+  const hidden = document.getElementById('id_correo_envio');
+  const principal = document.getElementById('correo_envio_1');
+  const contenedor = document.getElementById('correos-envio-adicionales');
+  const btn = document.getElementById('btn-add-correo-extra');
+
+  if (!form || !hidden || !principal || !contenedor || !btn) return;
+
+  function syncHidden(){
+    const extras = Array.from(contenedor.querySelectorAll('.correo-envio-extra'))
+      .map(input => input.value.trim())
+      .filter(Boolean);
+
+    const todos = [principal.value.trim(), ...extras].filter(Boolean);
+    hidden.value = todos.join(', ');
+  }
+
+  function renumerarCorreos(){
+    contenedor.querySelectorAll('.correo-extra-wrapper').forEach((wrapper, idx) => {
+      const numero = idx + 2;
+      const label = wrapper.querySelector('label');
+      const input = wrapper.querySelector('input');
+
+      if (label) {
+        label.textContent = `Correo de envío ${numero}`;
+        label.setAttribute('for', `correo_envio_${numero}`);
+      }
+      if (input) {
+        input.id = `correo_envio_${numero}`;
+      }
+    });
+  }
+
+  function crearCampoExtra(valor = ''){
+    const index = contenedor.querySelectorAll('.correo-extra-wrapper').length + 2;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-3 correo-extra-wrapper';
+    wrapper.innerHTML = `
+      <label for="correo_envio_${index}" class="form-label">Correo de envío ${index}</label>
+      <div class="input-group">
+        <input
+          type="email"
+          id="correo_envio_${index}"
+          class="form-control correo-envio-extra"
+          placeholder="notificaciones@ejemplo.com (opcional)"
+          value="${valor}"
+        >
+        <button type="button" class="btn btn-danger btn-remove-correo">×</button>
+      </div>
+    `;
+
+    const input = wrapper.querySelector('.correo-envio-extra');
+    const btnRemove = wrapper.querySelector('.btn-remove-correo');
+
+    input.addEventListener('input', syncHidden);
+    btnRemove.addEventListener('click', function () {
+      wrapper.remove();
+      renumerarCorreos();
+      syncHidden();
+    });
+
+    contenedor.appendChild(wrapper);
+  }
+
+  const iniciales = (hidden.value || '')
+    .split(/[,\n;]+/)
+    .map(v => v.trim())
+    .filter(Boolean);
+
+  principal.value = iniciales[0] || '';
+  principal.addEventListener('input', syncHidden);
+
+  iniciales.slice(1).forEach(valor => crearCampoExtra(valor));
+
+  btn.addEventListener('click', function () {
+    crearCampoExtra('');
+  });
+
+  form.addEventListener('submit', syncHidden);
+  syncHidden();
+}
+
 /* ─────────── Mostrar/Ocultar bloques ─────────── */
 document.addEventListener('DOMContentLoaded', ()=>{
   const inpNombre    = document.getElementById('id_nombre');
@@ -340,6 +453,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   toggleConsorcio();
   validarPorcentajes();
   recalcular();
+  inicializarCorreosEnvio();
 });
 </script>
 {% endblock %}

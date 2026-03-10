@@ -74,9 +74,19 @@ class Empresa(models.Model):
     correo         = models.EmailField(verbose_name='Correo Electrónico', blank=True, null=True,)
 
     # nuevo
-    correo_envio   = models.EmailField('Correo de envío', max_length=254,
-                                       blank=True, null=True,
-                                       help_text='Dirección donde llegarán las notificaciones automáticas')
+    correo_envio = models.TextField(
+        'Correos de envío',
+        blank=True,
+        null=True,
+        help_text='Direcciones separadas por coma o punto y coma'
+    )
+
+    observaciones = models.TextField(
+        'Observaciones',
+        blank=True,
+        default='',
+        help_text='Notas opcionales de la empresa o consorcio'
+    )
     
     socios = models.TextField(
         blank=True,

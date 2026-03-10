@@ -64,10 +64,11 @@
         {% endif %}
       {% endif %}
 
-      {# Campos comunes: teléfono, correo, correo_envio #}
+      {# Campos comunes: teléfono, correo, correo_envio, observaciones #}
       <p><b>Teléfono:</b> {{ resultado.telefono|default:"—" }}</p>
       <p><b>Correo:</b> {{ resultado.correo|default:"—" }}</p>
       <p><b>Correo de envío:</b> {{ resultado.correo_envio|default:"—" }}</p>
+      <p><b>Observaciones:</b> {{ resultado.observaciones|default:"—" }}</p>
     </div>
   </div>
   {% if CAN_CARTAS %}

@@ -6,6 +6,7 @@ from .models import CartaFianza, Empresa, Fideicomiso, ArchivoAdjunto, Desembols
 import re
 import json
 from decimal import Decimal, ROUND_HALF_UP
+from django.core.validators import EmailValidator
 
 def romano_a_entero(txt: str) -> int:
     mapa = {'I':1,'V':5,'X':10,'L':50,'C':100,'D':500,'M':1000}
@@ -42,7 +43,7 @@ class EmpresaForm(forms.ModelForm):
         model = Empresa
         fields = [
             'ruc', 'nombre', 'nombre_gerente', 'dni_gerente',
-            'telefono', 'correo', 'correo_envio',
+            'telefono', 'correo', 'correo_envio', 'observaciones',
             'socios',
             # campos de consorcio
             'es_consorcio', 'nombre_consorcio', 'tributador',
@@ -55,8 +56,11 @@ class EmpresaForm(forms.ModelForm):
             'telefono':         forms.TextInput(attrs={'placeholder': '9 dígitos (opcional)'}),
             'dni_gerente':      forms.TextInput(attrs={'placeholder': 'Solo números'}),
             'correo':           forms.EmailInput(attrs={'placeholder': 'correo@ejemplo.com (opcional)'}),
-            'correo_envio':     forms.EmailInput(attrs={'placeholder': 'notificaciones@ejemplo.com (opcional)'}),
-            # puedes añadir widgets específicos para los nuevos campos si quieres
+            'correo_envio':     forms.HiddenInput(),
+            'observaciones':    forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'Observaciones opcionales'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -77,7 +81,7 @@ class EmpresaForm(forms.ModelForm):
 
         # 3) Campos que NUNCA son obligatorios
         for name in (
-            'telefono', 'correo', 'correo_envio',
+            'telefono', 'correo', 'correo_envio', 'observaciones',
             'nombre_consorcio', 'tributador', 'ruc_tributador',
             'ruc_consorcio', 'empresas_consorciadas',
             'representante_legal', 'dni_representante',
@@ -193,6 +197,26 @@ class EmpresaForm(forms.ModelForm):
             raise ValidationError('El DNI/C.E. debe contener solo números.')
         return dni
     
+    def clean_correo_envio(self):
+        raw = (self.cleaned_data.get('correo_envio') or '').strip()
+        if not raw:
+            return ''
+
+        validator = EmailValidator()
+        correos = []
+
+        for correo in re.split(r'[,\n;]+', raw):
+            correo = correo.strip()
+            if not correo:
+                continue
+            try:
+                validator(correo)
+            except ValidationError:
+                raise ValidationError(f'Correo de envío inválido: {correo}')
+            correos.append(correo)
+
+        return ', '.join(correos)
+
     def save(self, commit=True):
         obj = super().save(commit=False)
 
