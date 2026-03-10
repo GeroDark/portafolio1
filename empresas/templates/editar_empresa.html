@@ -260,7 +260,10 @@ function recalcular(syncHidden = true){
     const pct    = parseFloat(r.children[1].querySelector('input').value) || 0;
     const dni    = r.children[2].querySelector('input').value.trim();
     total += pct;
-    if (nombre) datos.push(`${nombre} (${pct}%) – ${dni}`);
+
+    if (nombre) {
+      datos.push(dni ? `${nombre} (${pct}%) – ${dni}` : `${nombre} (${pct}%) –`);
+    }
   });
 
   if (syncHidden) {
@@ -445,7 +448,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     sociosHidden.value
       .split(', ')
       .forEach(txt => {
-        const m = txt.match(/(.*)\s+\((\d+(?:\.\d+)?)%\)\s+–\s+(.*)/);
+        const m = txt.match(/^(.*?)\s+\((\d+(?:\.\d+)?)%\)\s+–\s*(.*)$/);
         if (m) agregarSocio(m[1], m[2], m[3], false);
       });
     recalcular(false);
