@@ -38,6 +38,7 @@ class EmpresaForm(forms.ModelForm):
 
     socios = forms.CharField(
         required=False,
+        strip=False,
         widget=forms.HiddenInput()
     )
     empresas_consorciadas = forms.CharField(
