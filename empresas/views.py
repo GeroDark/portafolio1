@@ -219,12 +219,19 @@ def calendario_fianzas(request):
     vencen_mes = CartaFianza.objects.filter(
         fecha_vencimiento__range=[rango_i, rango_f]
     )
-    vencidas = CartaFianza.objects.filter(
+    vp = request.GET.get("vp", 1)  # página vencidas
+    pp = request.GET.get("pp", 1)  # página próximas
+
+    vencidas_qs = CartaFianza.objects.filter(
         fecha_vencimiento__lt=hoy
-    ).order_by("-fecha_vencimiento")[:50]
-    proximas = CartaFianza.objects.filter(
+    ).order_by("-fecha_vencimiento")
+
+    proximas_qs = CartaFianza.objects.filter(
         fecha_vencimiento__range=[hoy, hoy + datetime.timedelta(days=30)]
     ).order_by("fecha_vencimiento")
+
+    vencidas = Paginator(vencidas_qs, 5).get_page(vp)
+    proximas = Paginator(proximas_qs, 5).get_page(pp)
 
     cal = calendar.Calendar(firstweekday=0)
     semanas = []
@@ -239,6 +246,23 @@ def calendario_fianzas(request):
             })
         semanas.append(fila)
 
+    def _page_numbers(page_obj, window=1):
+        total = page_obj.paginator.num_pages
+        current = page_obj.number
+
+        raw = {1, total}
+        raw.update(range(max(1, current - window), min(total, current + window) + 1))
+        ordered = sorted(raw)
+
+        result = []
+        prev = None
+        for num in ordered:
+            if prev is not None and num - prev > 1:
+                result.append(None)
+            result.append(num)
+            prev = num
+        return result
+
     context = {
         "semanas": semanas,
         "dias_semana": [
@@ -252,6 +276,8 @@ def calendario_fianzas(request):
         "mes_actual": base.strftime("%Y-%m"),
         "vencidas": vencidas,
         "proximas": proximas,
+        "vencidas_page_numbers": _page_numbers(vencidas),
+        "proximas_page_numbers": _page_numbers(proximas),
     }
     return render(request, "calendario.html", context)
 

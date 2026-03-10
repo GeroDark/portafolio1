@@ -1,4 +1,4 @@
-{% load cie_extras %}   {#  <--  NECESARIO para usar |replace  #}
+{% load cie_extras %}
 
 {# =========  BARRA LATERAL (vencidas y próximas)  ========= #}
 
@@ -7,6 +7,7 @@
   <div class="card-header py-2 fw-bold text-white" style="background:#C82333;">
     ⚠ Vencidas
   </div>
+
   <ul class="list-group list-group-flush small">
     {% for f in vencidas %}
       {% with f_fecha=f.fecha_vencimiento %}
@@ -29,6 +30,69 @@
       <li class="list-group-item text-muted">Sin vencidas</li>
     {% endfor %}
   </ul>
+
+  {% if vencidas.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-center py-2">
+      <nav aria-label="Paginación de vencidas">
+        <ul class="pagination pagination-sm flex-wrap mb-0">
+
+          {% if vencidas.has_previous %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#b3001b; border-color:#d11f34;"
+                href="?m={{ mes_actual }}&vp={{ vencidas.previous_page_number }}&pp={{ proximas.number }}"
+              >
+                Anterior
+              </a>
+            </li>
+          {% endif %}
+
+          {% for num in vencidas_page_numbers %}
+            {% if num %}
+              {% if num == vencidas.number %}
+                <li class="page-item active">
+                  <span
+                    class="page-link"
+                    style="background-color:#d11f34; border-color:#d11f34; color:#fff; font-weight:600;"
+                  >
+                    {{ num }}
+                  </span>
+                </li>
+              {% else %}
+                <li class="page-item">
+                  <a
+                    class="page-link"
+                    style="color:#b3001b; border-color:#d11f34;"
+                    href="?m={{ mes_actual }}&vp={{ num }}&pp={{ proximas.number }}"
+                  >
+                    {{ num }}
+                  </a>
+                </li>
+              {% endif %}
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link" style="color:#999;">…</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if vencidas.has_next %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#b3001b; border-color:#d11f34;"
+                href="?m={{ mes_actual }}&vp={{ vencidas.next_page_number }}&pp={{ proximas.number }}"
+              >
+                Siguiente
+              </a>
+            </li>
+          {% endif %}
+
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
 </div>
 
 <!-- ─────  PRÓXIMOS 30 DÍAS  ───── -->
@@ -36,6 +100,7 @@
   <div class="card-header py-2 fw-bold text-dark" style="background:#FFC107;">
     ⏰ Próximos 30 días
   </div>
+
   <ul class="list-group list-group-flush small">
     {% for f in proximas %}
       {% with f_fecha=f.fecha_vencimiento %}
@@ -58,4 +123,67 @@
       <li class="list-group-item text-muted">Sin próximas</li>
     {% endfor %}
   </ul>
+
+  {% if proximas.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-center py-2">
+      <nav aria-label="Paginación de próximas">
+        <ul class="pagination pagination-sm flex-wrap mb-0">
+
+          {% if proximas.has_previous %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#9a6b00; border-color:#d6a300;"
+                href="?m={{ mes_actual }}&vp={{ vencidas.number }}&pp={{ proximas.previous_page_number }}"
+              >
+                Anterior
+              </a>
+            </li>
+          {% endif %}
+
+          {% for num in proximas_page_numbers %}
+            {% if num %}
+              {% if num == proximas.number %}
+                <li class="page-item active">
+                  <span
+                    class="page-link"
+                    style="background-color:#ffc107; border-color:#d6a300; color:#3b2a00; font-weight:600;"
+                  >
+                    {{ num }}
+                  </span>
+                </li>
+              {% else %}
+                <li class="page-item">
+                  <a
+                    class="page-link"
+                    style="color:#9a6b00; border-color:#d6a300;"
+                    href="?m={{ mes_actual }}&vp={{ vencidas.number }}&pp={{ num }}"
+                  >
+                    {{ num }}
+                  </a>
+                </li>
+              {% endif %}
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link" style="color:#999;">…</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if proximas.has_next %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                style="color:#9a6b00; border-color:#d6a300;"
+                href="?m={{ mes_actual }}&vp={{ vencidas.number }}&pp={{ proximas.next_page_number }}"
+              >
+                Siguiente
+              </a>
+            </li>
+          {% endif %}
+
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
 </div>
