@@ -25,6 +25,12 @@ def suma_porcentajes(txt: str) -> bool:
     p = re.findall(r'\((\d+(?:\.\d+)?)%\)', txt)
     return p and math.isclose(sum(map(float, p)), 100.0, abs_tol=0.01)
 
+def html5_date_widget(extra_attrs=None):
+    attrs = {'type': 'date'}
+    if extra_attrs:
+        attrs.update(extra_attrs)
+    return forms.DateInput(format='%Y-%m-%d', attrs=attrs)
+
 # ─────────────────────────────
 #  EMPRESA
 # ─────────────────────────────
@@ -250,7 +256,7 @@ class CartaFianzaForm(forms.ModelForm):
         model   = CartaFianza
         exclude = ['empresa']
         widgets = {
-            'fecha_vencimiento':   forms.DateInput(attrs={'type': 'date'}),
+            'fecha_vencimiento':   html5_date_widget(),
             'tiene_consorcio':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'es_independiente':    forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'empresas_consorciadas': forms.HiddenInput(),   # se edita con JS
@@ -259,6 +265,8 @@ class CartaFianzaForm(forms.ModelForm):
     # ——— Personaliza atributos Bootstrap en todos los campos ———
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.fields['fecha_vencimiento'].input_formats = ['%Y-%m-%d']
 
         for name, field in self.fields.items():
             attrs = field.widget.attrs
@@ -355,8 +363,12 @@ class LiquidacionFianzaForm(forms.ModelForm):
         model = LiquidacionFianza
         fields = ['monto_dev','aseguradora','fecha_dev','nro_fianza','documentos']
         widgets = {
-            'fecha_dev': forms.DateInput(attrs={'type':'date'}),
+            'fecha_dev': html5_date_widget(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['fecha_dev'].input_formats = ['%Y-%m-%d']
 
 # ─────────────────────────────
 #  FIDEICOMISO (sin cambios)
@@ -370,11 +382,12 @@ class DesembolsoForm(forms.ModelForm):
         model  = Desembolso
         fields = ['tipo', 'fecha', 'monto']
         widgets = {
-            'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'fecha': html5_date_widget({'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['fecha'].input_formats = ['%Y-%m-%d']
         for f in self.fields.values():
             f.widget.attrs['class'] = f.widget.attrs.get('class', '') + ' form-control'
 
@@ -410,9 +423,14 @@ class AdelantoFidForm(forms.ModelForm):
     class Meta:
         model  = AdelantoFid
         fields = ('fecha', 'monto')
-        widgets = {'fecha': forms.DateInput(attrs={'type':'date','class':'form-control'}),
-                   
-                   'monto': forms.NumberInput(attrs={'class':'form-control'})}
+        widgets = {
+            'fecha': html5_date_widget({'class': 'form-control'}),
+            'monto': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['fecha'].input_formats = ['%Y-%m-%d']
 
 AdelantoFidFormSet = inlineformset_factory(
         Fideicomiso, AdelantoFid,
@@ -429,8 +447,8 @@ class FideicomisoForm(forms.ModelForm):
         model = Fideicomiso
         exclude = ('empresa', 'resta_pendiente')   # "empresa" la fija la vista; "resta_pendiente" se calcula
         widgets = {
-            'fecha_inicio'         : forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'fecha_termino'        : forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'fecha_inicio'         : html5_date_widget({'class': 'form-control'}),
+            'fecha_termino'        : html5_date_widget({'class': 'form-control'}),
             'deuda_total_moneda'   : forms.Select(attrs={'class': 'form-select'}),
             'deuda_total'          : forms.NumberInput(attrs={'class': 'form-control'}),
             'adelanto_directo_moneda'   : forms.Select(attrs={'class': 'form-select'}),
@@ -464,6 +482,8 @@ class FideicomisoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['fecha_inicio'].input_formats = ['%Y-%m-%d']
+        self.fields['fecha_termino'].input_formats = ['%Y-%m-%d']
         # ─── Aplicar clases Bootstrap a todos los campos ───
         for name, field in self.fields.items():
             if isinstance(field.widget, forms.CheckboxInput):
@@ -515,7 +535,7 @@ class PagoEmpresaForm(forms.ModelForm):
             "origen", "carta", "fideicomiso",
         ]
         widgets = {
-            'fecha_pago': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'fecha_pago': html5_date_widget({'class': 'form-control'}),
         }
 
     def clean(self):
@@ -574,6 +594,7 @@ class PagoEmpresaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         empresa = kwargs.pop("empresa", None)
         super().__init__(*args, **kwargs)
+        self.fields['fecha_pago'].input_formats = ['%Y-%m-%d']
 
         # Ordena campos modernos (opcional)
         self.fields["origen"].label = "Origen del pago"

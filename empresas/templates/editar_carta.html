@@ -169,7 +169,7 @@
 {% block extra_js %}
 <script>
 /* ---------- Funciones globales ---------- */
-function agregarCampo(nombre = '', pct = '') {
+function agregarCampo(nombre = '', pct = '', syncHidden = true) {
   const cont = document.getElementById('empresas_consorciadas_group');
   const div  = document.createElement('div');
   div.className = 'input-group mb-2';
@@ -180,10 +180,10 @@ function agregarCampo(nombre = '', pct = '') {
     <button type="button" class="btn btn-danger"
             onclick="this.parentNode.remove(); validarPorcentajes()">×</button>`;
   cont.appendChild(div);
-  validarPorcentajes();
+  if (syncHidden) validarPorcentajes();
 }
 
-function validarPorcentajes() {
+function validarPorcentajes(syncHidden = true) {
   let total = 0, datos = [];
   document.querySelectorAll('#empresas_consorciadas_group .input-group')
           .forEach(g => {
@@ -194,7 +194,9 @@ function validarPorcentajes() {
           });
 
   const hidden = document.getElementById('id_empresas_consorciadas');
-  hidden.value = datos.join(', ');
+  if (syncHidden) {
+    hidden.value = datos.join(', ');
+  }
 
   const err   = document.getElementById('porcentaje_error');
   const ok100 = Math.abs(total - 100) < 0.001;
@@ -251,10 +253,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (hiddenInput.value.trim()) {
     hiddenInput.value.split(', ').forEach(txt => {
       const m = txt.match(/(.*)\s+\((\d+(?:\.\d+)?)%\)/);
-      if (m) agregarCampo(m[1], m[2]);
+      if (m) agregarCampo(m[1], m[2], false);
     });
+    validarPorcentajes(false);
   }
-  validarPorcentajes();
 });
 </script>
 {% endblock %}
