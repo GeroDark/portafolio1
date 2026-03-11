@@ -32,6 +32,8 @@ urlpatterns = [
     path("calendario/",            views.calendario_fianzas, name="calendario_fianzas"),
     path('carta/<int:fianza_id>/detalle/',   views.carta_detalle,   name='carta_detalle'),
     path('carta/<int:fianza_id>/archivos/',  views.carta_archivos,  name='carta_archivos'),
+    path('fideicomiso/<int:fideicomiso_id>/detalle/', views.fideicomiso_detalle, name='fideicomiso_detalle'),
+    path('fideicomiso/<int:fideicomiso_id>/documentos/', views.fideicomiso_documentos, name='fideicomiso_documentos'),
 
     # ─── cartas fianza ───────────────────────────────────────────
     

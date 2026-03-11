@@ -1,4 +1,6 @@
 import os
+import re
+import unicodedata
 from django.db import models
 from django.core.validators import RegexValidator, EmailValidator
 from django.core.exceptions import ValidationError
@@ -58,7 +60,95 @@ MONEDAS = [
     ('$',  'Dólares'),
     ('€',  'Euros'),
 ]
+def _norm_text(value: str) -> str:
+    value = (value or "").strip().upper()
+    if not value:
+        return ""
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(c for c in value if not unicodedata.combining(c))
+    value = re.sub(r"\s+", " ", value)
+    return value
 
+
+def _split_empresas_consorciadas(texto: str) -> list[str]:
+    """
+    Convierte:
+    'EMPRESA A (10%), EMPRESA B (90%)'
+    o
+    'EMPRESA A (10%)\\nEMPRESA B (90%)'
+    en:
+    ['EMPRESA A', 'EMPRESA B']
+    """
+    items = []
+    for raw in re.split(r"\s*(?:,|;|\r?\n)+\s*", texto or ""):
+        raw = raw.strip()
+        if not raw:
+            continue
+        nombre = re.sub(r"\s*\((\d+(?:\.\d+)?)%\)\s*$", "", raw).strip(" -–—,")
+        if nombre:
+            items.append(nombre)
+    return items
+
+
+def _empresa_aliases(empresa) -> set[str]:
+    valores = {
+        empresa.ruc,
+        empresa.nombre,
+        empresa.nombre_consorcio,
+        empresa.tributador,
+        empresa.ruc_tributador,
+        empresa.ruc_consorcio,
+    }
+    return {_norm_text(v) for v in valores if v}
+
+
+def _carta_aliases(carta) -> set[str]:
+    valores = {
+        carta.afianzado,
+        carta.nombre_consorcio,
+        carta.tributador,
+        carta.ruc_tributador,
+        carta.ruc_consorcio,
+    }
+
+    if carta.empresa_id:
+        valores.add(carta.empresa.ruc)
+        valores.add(carta.empresa.nombre)
+        valores.add(carta.empresa.nombre_consorcio)
+
+    for item in _split_empresas_consorciadas(carta.empresas_consorciadas):
+        valores.add(item)
+
+    return {_norm_text(v) for v in valores if v}
+
+
+def _empresa_calza_con_carta(empresa, carta) -> bool:
+    return bool(_empresa_aliases(empresa) & _carta_aliases(carta))
+
+def _fideicomiso_aliases(fidei) -> set[str]:
+    valores = {
+        fidei.nombre_consorcio,
+        fidei.ruc_consorcio,
+    }
+
+    if fidei.empresa_id:
+        valores.update({
+            fidei.empresa.ruc,
+            fidei.empresa.nombre,
+            fidei.empresa.nombre_consorcio,
+            fidei.empresa.tributador,
+            fidei.empresa.ruc_tributador,
+            fidei.empresa.ruc_consorcio,
+        })
+
+    for item in _split_empresas_consorciadas(fidei.empresas_consorciadas):
+        valores.add(item)
+
+    return {_norm_text(v) for v in valores if v}
+
+
+def _empresa_calza_con_fideicomiso(empresa, fidei) -> bool:
+    return bool(_empresa_aliases(empresa) & _fideicomiso_aliases(fidei))
 # ────────────────────────────────────────────────────────────
 # MODELO EMPRESA
 # ────────────────────────────────────────────────────────────
@@ -106,6 +196,11 @@ class Empresa(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.ruc})"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        sync_empresa_con_cartas(self)
+        sync_empresa_con_fideicomisos(self)
 
     def delete(self, *args, **kwargs):
         # Eliminar archivos de cartas fianza
@@ -137,8 +232,18 @@ class ArchivoAdjunto(models.Model):
 # MODELO CARTA FIANZA
 # ────────────────────────────────────────────────────────────
 class CartaFianza(models.Model):
-    empresa          = models.ForeignKey(Empresa, on_delete=models.CASCADE,
-                                         related_name='cartas_fianza', verbose_name='Empresa')
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name='cartas_fianza',
+        verbose_name='Empresa'
+    )
+    empresas_relacionadas = models.ManyToManyField(
+        Empresa,
+        blank=True,
+        related_name='cartas_fianza_relacionadas',
+        verbose_name='Empresas relacionadas por consorcio'
+    )
 
     aseguradora      = models.CharField(max_length=30, choices=ASEGURADORAS,
                                          verbose_name='Aseguradora')
@@ -196,6 +301,19 @@ class CartaFianza(models.Model):
 
     def __str__(self):
         return f"Fianza {self.numero_fianza} - {self.empresa.nombre}"
+    
+    def pertenece_a_empresa(self, empresa) -> bool:
+        empresa_id = getattr(empresa, "id", empresa)
+        if not empresa_id:
+            return False
+        return (
+            self.empresa_id == empresa_id
+            or self.empresas_relacionadas.filter(id=empresa_id).exists()
+        )
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        sync_carta_fianza_relaciones(self)
 
     def delete(self, *args, **kwargs):
         for archivo in self.archivos.all():
@@ -211,6 +329,86 @@ class CartaFianza(models.Model):
             suf_romano = entero_a_romano(int(suf))
             return f'{self.tipo_carta} {suf_romano}'
         return self.tipo_carta
+
+def sync_carta_fianza_relaciones(carta):
+    if not carta.pk:
+        return
+
+    relacionados_ids = set()
+
+    # siempre incluir la empresa dueña
+    if carta.empresa_id:
+        relacionados_ids.add(carta.empresa_id)
+
+    # si no tiene consorcio, limpiar todo y dejar solo la dueña
+    if not carta.tiene_consorcio:
+        carta.empresas_relacionadas.set(relacionados_ids)
+        return
+
+    empresas = Empresa.objects.all().only(
+        "id", "ruc", "nombre", "nombre_consorcio",
+        "tributador", "ruc_tributador", "ruc_consorcio"
+    )
+
+    for empresa in empresas:
+        if carta.empresa_id == empresa.id or _empresa_calza_con_carta(empresa, carta):
+            relacionados_ids.add(empresa.id)
+
+    carta.empresas_relacionadas.set(relacionados_ids)
+
+
+def sync_empresa_con_cartas(empresa):
+    if not empresa.pk:
+        return
+
+    cartas = CartaFianza.objects.filter(tiene_consorcio=True).select_related("empresa")
+
+    for carta in cartas:
+        if carta.empresa_id == empresa.id or _empresa_calza_con_carta(empresa, carta):
+            carta.empresas_relacionadas.add(empresa)
+        else:
+            carta.empresas_relacionadas.remove(empresa)
+
+def sync_fideicomiso_relaciones(fidei):
+    if not fidei.pk:
+        return
+
+    relacionados_ids = set()
+
+    # siempre incluir la empresa dueña
+    if fidei.empresa_id:
+        relacionados_ids.add(fidei.empresa_id)
+
+    # si no tiene consorcio, dejar solo la dueña
+    if not fidei.tiene_consorcio:
+        fidei.empresas_relacionadas.set(relacionados_ids)
+        return
+
+    empresas = Empresa.objects.all().only(
+        "id", "ruc", "nombre", "nombre_consorcio",
+        "tributador", "ruc_tributador", "ruc_consorcio"
+    )
+
+    for empresa in empresas:
+        if fidei.empresa_id == empresa.id or _empresa_calza_con_fideicomiso(empresa, fidei):
+            relacionados_ids.add(empresa.id)
+
+    fidei.empresas_relacionadas.set(relacionados_ids)
+
+
+def sync_empresa_con_fideicomisos(empresa):
+    if not empresa.pk:
+        return
+
+    fideicomisos = Fideicomiso.objects.filter(
+        tiene_consorcio=True
+    ).select_related("empresa")
+
+    for fidei in fideicomisos:
+        if fidei.empresa_id == empresa.id or _empresa_calza_con_fideicomiso(empresa, fidei):
+            fidei.empresas_relacionadas.add(empresa)
+        else:
+            fidei.empresas_relacionadas.remove(empresa)
 
 class LiquidacionFianza(models.Model):
     carta       = models.OneToOneField(
@@ -248,6 +446,15 @@ class Fideicomiso(models.Model):
     empresa = models.ForeignKey(
         Empresa, on_delete=models.CASCADE, related_name='fideicomisos'
     )
+
+    empresas_relacionadas = models.ManyToManyField(
+        Empresa,
+        blank=True,
+        related_name='fideicomisos_relacionados',
+        verbose_name='Empresas relacionadas por consorcio'
+    )
+
+    
 
     # ── Datos del TRIBUTADOR ────────────────────────────────
     tributador_nombre     = models.CharField(max_length=100, verbose_name='Nombre del Tributador')
@@ -375,6 +582,19 @@ class Fideicomiso(models.Model):
 
     def __str__(self):
         return f"Fideicomiso - {self.entidad_fiduciaria} ({self.empresa.nombre})"
+    
+    def pertenece_a_empresa(self, empresa) -> bool:
+        empresa_id = getattr(empresa, "id", empresa)
+        if not empresa_id:
+            return False
+        return (
+            self.empresa_id == empresa_id
+            or self.empresas_relacionadas.filter(id=empresa_id).exists()
+        )
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        sync_fideicomiso_relaciones(self)
 
     def delete(self, *args, **kwargs):
         # eliminar archivos físicos
@@ -523,13 +743,13 @@ class PagoEmpresa(models.Model):
         if self.origen == "CARTA":
             if not self.carta or self.fideicomiso:
                 raise ValidationError("Selecciona una Carta Fianza (y no un Fideicomiso) para un pago de origen CARTA.")
-            if self.carta and self.carta.empresa_id != self.empresa_id:
-                raise ValidationError("La carta seleccionada no pertenece a esta empresa.")
+            if self.carta and not self.carta.pertenece_a_empresa(self.empresa):
+                raise ValidationError("La carta seleccionada no pertenece ni está relacionada a esta empresa.")
         elif self.origen == "FIDEI":
             if not self.fideicomiso or self.carta:
                 raise ValidationError("Selecciona un Fideicomiso (y no una Carta) para un pago de origen FIDEI.")
-            if self.fideicomiso and self.fideicomiso.empresa_id != self.empresa_id:
-                raise ValidationError("El fideicomiso seleccionado no pertenece a esta empresa.")
+            if self.fideicomiso and not self.fideicomiso.pertenece_a_empresa(self.empresa):
+                raise ValidationError("El fideicomiso seleccionado no pertenece ni está relacionado a esta empresa.")
         else:
             raise ValidationError("Origen inválido.")
 

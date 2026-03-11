@@ -1,0 +1,38 @@
+<div class="modal fade" id="fideicomisoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:#198754;">
+        <h6 class="modal-title text-white m-0" id="modalTituloFideicomiso">Detalle</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body d-flex gap-3">
+        <div class="border-end pe-3" style="width:32%; min-width:280px;">
+          <dl class="row small mb-0" id="detalleFideicomiso"></dl>
+
+          <div class="d-grid gap-2 my-3">
+            {% if CAN_ALL or CAN_FIDEI or CAN_NOTIF %}
+              <a id="btnEditarFideicomiso" class="btn btn-outline-primary btn-sm" href="#">✏ Editar</a>
+            {% endif %}
+            {% if CAN_ALL or CAN_FIDEI %}
+              <a id="btnDesembolsoFideicomiso" class="btn btn-outline-secondary btn-sm" href="#">➕ Registrar desembolso</a>
+            {% endif %}
+            {% if CAN_ALL %}
+              <a id="btnEliminarFideicomiso" class="btn btn-outline-danger btn-sm" href="#">🗑 Eliminar</a>
+            {% endif %}
+          </div>
+
+          <div class="small fw-bold text-success mb-2">Documentos</div>
+          <ul class="list-group small" id="listaDocumentosFideicomiso"></ul>
+        </div>
+
+        <div class="flex-grow-1">
+            <div id="tituloDocumentoFideicomiso" class="small fw-bold text-success mb-2">
+                Selecciona un documento
+            </div>
+            <iframe id="visorPdfFideicomiso" style="width:100%;height:80vh;" frameborder="0"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

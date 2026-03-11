@@ -7,6 +7,7 @@ import re
 import json
 from decimal import Decimal, ROUND_HALF_UP
 from django.core.validators import EmailValidator
+from django.db.models import Q
 
 def romano_a_entero(txt: str) -> int:
     mapa = {'I':1,'V':5,'X':10,'L':50,'C':100,'D':500,'M':1000}
@@ -255,7 +256,7 @@ class CartaFianzaForm(forms.ModelForm):
 
     class Meta:
         model   = CartaFianza
-        exclude = ['empresa']
+        exclude = ['empresa', 'empresas_relacionadas']
         widgets = {
             'fecha_vencimiento':   html5_date_widget(),
             'tiene_consorcio':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -319,15 +320,13 @@ class CartaFianzaForm(forms.ModelForm):
         num  = cleaned.get('numero_adicional')
 
         if 'ADICIONAL' in tipo:
-            # si está vacío ⇒ por defecto 1
             if num is None:
                 cleaned['numero_adicional'] = 1
         else:
-            # si no es carta adicional, forzamos None
             cleaned['numero_adicional'] = None
 
         # -----------------------------------------------------------------
-        # 2) Consorcio (bloques que ya tenías)
+        # 2) Consorcio
         # -----------------------------------------------------------------
         if cleaned.get('tiene_consorcio'):
             oblig = ['nombre_consorcio', 'empresas_consorciadas',
@@ -336,14 +335,14 @@ class CartaFianzaForm(forms.ModelForm):
                 if not cleaned.get(campo):
                     self.add_error(campo, 'Este campo es obligatorio si hay consorcio.')
 
-            # validar suma de porcentajes
             raw = cleaned.get('empresas_consorciadas', '')
             matches = re.findall(r'\((\d+(?:\.\d+)?)%\)', raw)
             if matches and round(sum(float(p) for p in matches), 2) != 100.00:
-                self.add_error('empresas_consorciadas',
-                               'La suma de porcentajes debe ser exactamente 100 %.')
+                self.add_error(
+                    'empresas_consorciadas',
+                    'La suma de porcentajes debe ser exactamente 100 %.'
+                )
 
-            # consorcio independiente → campos extra
             if cleaned.get('es_independiente'):
                 for campo in ('tributador', 'ruc_tributador', 'ruc_consorcio'):
                     if not cleaned.get(campo):
@@ -351,6 +350,20 @@ class CartaFianzaForm(forms.ModelForm):
                             campo,
                             'Obligatorio cuando es independiente dentro del consorcio.'
                         )
+            else:
+                cleaned['tributador'] = ''
+                cleaned['ruc_tributador'] = ''
+                cleaned['ruc_consorcio'] = ''
+
+        else:
+            cleaned['nombre_consorcio'] = ''
+            cleaned['empresas_consorciadas'] = ''
+            cleaned['representante_legal'] = ''
+            cleaned['dni_representante'] = ''
+            cleaned['es_independiente'] = False
+            cleaned['tributador'] = ''
+            cleaned['ruc_tributador'] = ''
+            cleaned['ruc_consorcio'] = ''
 
         # -----------------------------------------------------------------
         # 3) Aseguradora “OTROS”
@@ -446,7 +459,7 @@ DocumentoFidFormSet = inlineformset_factory(
 class FideicomisoForm(forms.ModelForm):
     class Meta:
         model = Fideicomiso
-        exclude = ('empresa', 'resta_pendiente')   # "empresa" la fija la vista; "resta_pendiente" se calcula
+        exclude = ('empresa', 'resta_pendiente', 'empresas_relacionadas')  # "empresa" la fija la vista; "resta_pendiente" se calcula
         widgets = {
             'fecha_inicio'         : html5_date_widget({'class': 'form-control'}),
             'fecha_termino'        : html5_date_widget({'class': 'form-control'}),
@@ -566,16 +579,15 @@ class PagoEmpresaForm(forms.ModelForm):
         if origen == 'CARTA':
             if not carta:
                 self.add_error('carta', 'Selecciona la carta.')
-            elif empresa and carta.empresa_id != empresa.id:
-                self.add_error('carta', 'La carta seleccionada no pertenece a esta empresa.')
-            # neutraliza el otro campo
+            elif empresa and not carta.pertenece_a_empresa(empresa):
+                self.add_error('carta', 'La carta seleccionada no pertenece ni está relacionada a esta empresa.')
             cleaned['fideicomiso'] = None
 
         elif origen == 'FIDEI':
             if not fidei:
                 self.add_error('fideicomiso', 'Selecciona el fideicomiso.')
-            elif empresa and fidei.empresa_id != empresa.id:
-                self.add_error('fideicomiso', 'El fideicomiso seleccionado no pertenece a esta empresa.')
+            elif empresa and not fidei.pertenece_a_empresa(empresa):
+                self.add_error('fideicomiso', 'El fideicomiso seleccionado no pertenece ni está relacionado a esta empresa.')
             cleaned['carta'] = None
 
         # 3) Consistencias con adelantos
@@ -610,8 +622,18 @@ class PagoEmpresaForm(forms.ModelForm):
 
         from .models import CartaFianza, Fideicomiso
         if empresa:
-            self.fields["carta"].queryset = CartaFianza.objects.filter(empresa=empresa).order_by("-fecha_vencimiento")
-            self.fields["fideicomiso"].queryset = Fideicomiso.objects.filter(empresa=empresa).order_by("-fecha_termino")
+            self.fields["carta"].queryset = (
+                CartaFianza.objects
+                .filter(Q(empresa=empresa) | Q(empresas_relacionadas=empresa))
+                .distinct()
+                .order_by("-fecha_vencimiento", "-id")
+            )
+            self.fields["fideicomiso"].queryset = (
+                Fideicomiso.objects
+                .filter(Q(empresa=empresa) | Q(empresas_relacionadas=empresa))
+                .distinct()
+                .order_by("-fecha_termino", "-id")
+            )
         else:
             self.fields["carta"].queryset = CartaFianza.objects.none()
             self.fields["fideicomiso"].queryset = Fideicomiso.objects.none()

@@ -80,12 +80,12 @@
               background:#F26522;border:2px solid #000;">
         <i class="bi bi-shield-lock-fill text-white" style="font-size:.9rem;"></i>
       </span>
-      Cartas Fianza&nbsp;({{ resultado.cartas_fianza.count }})
+      Cartas Fianza&nbsp;({{ cartas_resultado|length }})
     </h5>
 
-    {% if resultado.cartas_fianza.all %}
+    {% if cartas_resultado %}
       <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
-        {% for f in resultado.cartas_fianza.all %}
+        {% for f in cartas_resultado %}
           <div class="col">
             <div
               class="card h-100 border-cie carta-mini"
@@ -95,11 +95,16 @@
                 class="card-header {% if f.liquidada %}bg-success{% else %}bg-secondary{% endif %} text-white py-1 px-2 small">
                 Nº&nbsp;{{ f.numero_fianza }}-{{ f.aseguradora }}
               </div>
-              <div class="card-body p-2"
-                  data-tipo="{{ f.tipo_completo }}">
+              <div class="card-body p-2" data-tipo="{{ f.tipo_completo }}">
                 <div class="fw-bold small">{{ f.entidad|default:"—" }}</div>
                 <div class="small text-muted">{{ f.aseguradora }}</div>
                 <div class="small">{{ f.tipo_completo }}</div>
+
+                {% if f.empresa_id != resultado.id %}
+                  <div class="small mt-1 text-warning">
+                    Compartida por consorcio
+                  </div>
+                {% endif %}
               </div>
             </div>
           </div>
@@ -112,125 +117,49 @@
     {% endif %}
   {% endif %}  
   <!-- FIDEICOMISOS -->
+    <!-- FIDEICOMISOS -->
   {% if CAN_FIDEI or CAN_NOTIF or CAN_ALL %}
-    {% if resultado.fideicomisos.all %}
-      <h4 class="mt-5 text-primary">📘 Fideicomisos</h4>
-      {% for f in resultado.fideicomisos.all %}
-        <div class="card shadow-sm mb-4 border-0">
-          <div class="card-header bg-secondary text-white">
-            🏛️ Entidad Fiduciaria: {{ f.entidad_fiduciaria }}
-          </div>
-          <div class="card-body small">
-            <p class="mb-1 fw-semibold text-primary">🏦 Tributador</p>
-            <ul class="mb-3">
-              <li><b>Nombre:</b> {{ f.tributador_nombre }}</li>
-              <li><b>Banco:</b> {{ f.tributador_banco }}</li>
-              <li><b>Nro de Cuenta:</b> {{ f.tributador_nro_cuenta }}</li>
-              <li><b>Nro de Cuenta CCI:</b> {{ f.tributador_nro_cci }}</li>
-            </ul>
-            <p class="fw-semibold text-success mb-1">💰 Adelanto Directo</p>
-            <ul>
-              <li>Total: {{ f.adelanto_directo_moneda }} {{ f.adelanto_directo_monto|floatformat:2|intcomma }}</li>
-              <li>Con retención (96 %): {{ f.adelanto_directo_moneda }} {{ f.directo_con_retencion|floatformat:2|intcomma }}</li>
-              <li>Restante: {{ f.adelanto_directo_moneda }} {{ f.directo_restante|floatformat:2|intcomma }}</li>
-            </ul>
-            <p class="fw-semibold text-success mb-1">💰 Adelanto Materiales</p>
-            <ul>
-              <li>Total: {{ f.adelanto_materiales_moneda }} {{ f.adelanto_materiales_monto|floatformat:2|intcomma }}</li>
-              <li>Con retención (96 %): {{ f.adelanto_materiales_moneda }} {{ f.materiales_con_retencion|floatformat:2|intcomma }}</li>
-              <li>Restante: {{ f.adelanto_materiales_moneda }} {{ f.materiales_restante|floatformat:2|intcomma }}</li>
-            </ul>
-            <hr class="my-3">
-            <p><b>Entidad Ejecutora:</b> {{ f.entidad_ejecutora }}</p>
-            <p><b>Entidad Fiduciaria:</b> {{ f.entidad_fiduciaria }}</p>
-            <p><b>Representante:</b> {{ f.representante }}</p>
-            <p><b>Residente de Obra:</b> {{ f.residente_obra }}</p>
-            <p><b>Estado de Ejecución:</b> {{ f.estado_ejecucion }}</p>
-            <p><b>Modalidad de Ejecución:</b> {{ f.modalidad_ejecucion }}</p>
-            <p><b>Plazo de Ejecución:</b> {{ f.plazo_ejecucion }}</p>
-            <p><b>Monto del Contrato:</b> {{ f.monto_contrato_moneda }} {{ f.monto_contrato|floatformat:2|intcomma }}</p>
-            <p><b>Inicio de Obra:</b> {{ f.fecha_inicio|date:"d/m/Y" }}</p>
-            <p><b>Fin de Obra:</b> {{ f.fecha_termino|date:"d/m/Y" }}</p>
-            {% if f.desembolsos.exists %}
-              <hr><p class="fw-semibold">📤 Desembolsos</p>
-              <ul>
-                {% for d in f.desembolsos.all %}
-                  <li>{{ forloop.counter }}º {{ d.get_tipo_display }} – {{ d.fecha|date:"d/m/Y" }} – {% if d.tipo == 'directo' %}
-                      {{ f.adelanto_directo_moneda }}
-                    {% else %}
-                      {{ f.adelanto_materiales_moneda }}
-                    {% endif %}{{ d.monto|floatformat:2|intcomma }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-            {% if f.tiene_consorcio %}
-              <hr>
-              <h6 class="fw-bold">🤝 Datos del Consorcio</h6>
-              <p><b>Nombre:</b> {{ f.nombre_consorcio }}</p>
-              <p><b>Empresas:</b> {{ f.empresas_consorciadas }}</p>
-              <p><b>Representante:</b> {{ f.representante_legal }}</p>
-              <p><b>DNI/C.E.:</b> {{ f.dni_representante }}</p>
+    <h5 class="mb-3 d-flex align-items-center gap-2 mt-4">
+      <span
+        class="d-inline-flex align-items-center justify-content-center rounded-circle"
+        style="width:1.6rem;height:1.6rem;
+              background:#198754;border:2px solid #000;">
+        <i class="bi bi-bank2 text-white" style="font-size:.9rem;"></i>
+      </span>
+      Fideicomisos&nbsp;({{ fideicomisos_resultado|length }})
+    </h5>
 
-              <p><b>Es independiente:</b> {{ f.es_independiente|yesno:"Sí,No" }}</p>
-              {% if f.es_independiente and f.ruc_consorcio %}
-                <p><b>RUC del consorcio:</b> {{ f.ruc_consorcio }}</p>
-              {% endif %}
-            {% endif %}
-            
-            {# ---- Correo(s) ---- #}
-            {% if f.correos.exists %}
-              <p class="fw-bold text-primary mb-1">📧 Correos de notificación</p>
-              <ul class="mb-3">
-                {% for c in f.correos.all %}
-                    <li>{{ c.nombre }} – <a href="mailto:{{ c.email }}">{{ c.email }}</a></li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-                <hr>
-            {# ---- Adelantos y Deuda ---- #}
-                      {% if f.deuda_total %}
-              <p><b>Deuda total:</b> {{ f.deuda_total_moneda }}{{ f.deuda_total|floatformat:2|intcomma }}</p>
-              <p><b>Pagado (adelantos):</b> {{ f.deuda_total_moneda }}{{ f.suma_adelantos|floatformat:2|intcomma }}</p>
-              <p><b>Resta:</b> {{ f.deuda_total_moneda }}{{ f.deuda_restante|floatformat:2|intcomma }}</p>
-            {% endif %}
+    {% if fideicomisos_resultado %}
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+        {% for f in fideicomisos_resultado %}
+          <div class="col">
+            <div
+              class="card h-100 border-success fidei-mini"
+              data-fideicomiso-id="{{ f.id }}"
+              style="cursor:pointer;">
+              <div class="card-header bg-secondary text-white py-1 px-2 small">
+                🏛️ {{ f.entidad_fiduciaria|default:"—" }}
+              </div>
+              <div class="card-body p-2">
+                <div class="fw-bold small">{{ f.entidad_ejecutora|default:"—" }}</div>
+                <div class="small text-muted">Representante: {{ f.representante|default:"—" }}</div>
+                <div class="small">
+                  Contrato: {{ f.monto_contrato_moneda }} {{ f.monto_contrato|floatformat:2|intcomma }}
+                </div>
+                <div class="small">
+                  Fin: {{ f.fecha_termino|date:"d/m/Y" }}
+                </div>
 
-            {# ---- Detalle de cada adelanto ---- #}
-            {% if f.adelantos.all %}
-              
-              <p class="fw-semibold">💸 Adelantos registrados</p>
-              <ul>
-                {% for a in f.adelantos.all %}
-                  <li>{{ a.fecha|date:"d/m/Y" }} – {{ f.deuda_total_moneda }}{{ a.monto|floatformat:2|intcomma }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-
-            {# ---- Documentos por categoría ---- #}
-            {% for label,docs in f.documentos_por_categoria.items %}
-              <p class="fw-semibold mt-3">{{ label }}</p>
-              <ul>
-                  {% for d in docs %}
-                    <li><a href="{{ d.archivo.url }}" target="_blank">{{ d.filename }}</a></li>
-                  {% endfor %}
-              </ul>
-            {% endfor %}
-
-            {% if CAN_ALL or CAN_FIDEI or CAN_NOTIF %}
-              <div class="mt-3 d-flex flex-wrap gap-2">
-                {% if CAN_ALL or CAN_FIDEI %}
-                  <a href="{% url 'agregar_desembolso' f.id %}" class="btn btn-sm btn-outline-secondary">➕ Registrar desembolso</a>
-                {% endif %}
-
-                <a href="{% url 'editar_fideicomiso' f.id %}" class="btn btn-sm btn-outline-primary">✏️ Editar</a>
-
-                {% if CAN_ALL %}
-                  <a href="{% url 'eliminar_fideicomiso' f.id %}" class="btn btn-sm btn-outline-danger">🗑️ Eliminar</a>
+                {% if f.empresa_id != resultado.id %}
+                  <div class="small mt-1 text-warning">
+                    Compartido por consorcio
+                  </div>
                 {% endif %}
               </div>
-            {% endif %}
+            </div>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
     {% else %}
       <div class="alert alert-secondary small">
         ℹ️ Esta empresa no tiene fideicomisos registrados.
@@ -284,6 +213,7 @@
       </div>
     </div>
   </div>
+  {% include "partials/fideicomiso_modal.html" %}
 
 {% elif request.GET.q %}
   <div class="alert alert-danger">❌ No se encontró ninguna empresa con ese criterio.</div>
@@ -302,13 +232,22 @@
   {{ block.super }}
   <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // ------ Helpers ------
     const $ = (sel) => document.querySelector(sel);
 
-    // Modal bootstrap preparado de una vez
+    // ===== Modales =====
     const modalEl = document.getElementById('fianzaModal');
-    const modal   = modalEl ? new bootstrap.Modal(modalEl) : null;
-    
+    const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+
+    const fideiModalEl = document.getElementById('fideicomisoModal');
+    const fideiModal = fideiModalEl ? new bootstrap.Modal(fideiModalEl) : null;
+
+    function money(moneda, valor) {
+      return `${moneda} ${Number(valor || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+    }
+
     function empresasEnLineasHtml(value) {
       if (!value) return '—';
       return String(value)
@@ -317,7 +256,9 @@
         .join('<br>');
     }
 
-    // Rellena el detalle del modal con el JSON de 'carta_detalle'
+    // =========================
+    // CARTA FIANZA
+    // =========================
     function renderDetalle(d){
       document.getElementById('modalTitulo').textContent =
         `${d.empresa || '—'} – Carta Nº ${d.numero}`;
@@ -326,14 +267,14 @@
       det.innerHTML = `
         <dt class="col-5">N°</dt><dd class="col-7">${d.numero}</dd>
         <dt class="col-5">Aseguradora</dt><dd class="col-7">${
-          d.aseguradora==='OTROS'?d.aseguradora_otro:d.aseguradora
+          d.aseguradora === 'OTROS' ? d.aseguradora_otro : d.aseguradora
         }</dd>
         <dt class="col-5">Tipo</dt><dd class="col-7">${d.tipo_carta}</dd>
-        <dt class="col-5">Monto</dt><dd class="col-7">${d.moneda} ${Number(d.monto).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</dd>
+        <dt class="col-5">Monto</dt><dd class="col-7">${money(d.moneda, d.monto)}</dd>
         <dt class="col-5">Plazo</dt><dd class="col-7">${d.plazo_meses} m / ${d.plazo_dias} d</dd>
         <dt class="col-5">Vence</dt><dd class="col-7">${d.vencimiento}</dd>
         <dt class="col-5">Entidad</dt><dd class="col-7">${d.entidad}</dd>
-        ${d.afianzado?`<dt class="col-5">Afianzado</dt><dd class="col-7">${d.afianzado}</dd>`:``}
+        ${d.afianzado ? `<dt class="col-5">Afianzado</dt><dd class="col-7">${d.afianzado}</dd>` : ``}
       `;
 
       if (d.tiene_consorcio) {
@@ -343,20 +284,21 @@
           <dt class="col-5">Empresas</dt><dd class="col-7">${empresasEnLineasHtml(d.empresas_consorciadas)}</dd>
           <dt class="col-5">Representante</dt><dd class="col-7">${d.representante_legal}</dd>
           <dt class="col-5">DNI/C.E.</dt><dd class="col-7">${d.dni_representante}</dd>
-          <dt class="col-5">Independiente</dt><dd class="col-7">${d.es_independiente?'Sí':'No'}</dd>
+          <dt class="col-5">Independiente</dt><dd class="col-7">${d.es_independiente ? 'Sí' : 'No'}</dd>
           <dt class="col-5">Tributador</dt><dd class="col-7">${d.tributador}</dd>
           <dt class="col-5">RUC Tributador</dt><dd class="col-7">${d.ruc_tributador}</dd>
-          ${d.es_independiente?`<dt class="col-5">RUC Consorcio</dt><dd class="col-7">${d.ruc_consorcio}</dd>`:``}
+          ${d.es_independiente ? `<dt class="col-5">RUC Consorcio</dt><dd class="col-7">${d.ruc_consorcio}</dd>` : ``}
         `);
       }
 
       const btnEditar = document.getElementById('btnEditar');
       const btnEliminar = document.getElementById('btnEliminar');
-      if (btnEditar)   btnEditar.href   = d.url_editar || '#';
+
+      if (btnEditar) btnEditar.href = d.url_editar || '#';
       if (btnEliminar) btnEliminar.href = d.url_eliminar || '#';
 
       const btnLiqu = document.getElementById('btnLiquidar');
-      if (btnLiqu){
+      if (btnLiqu) {
         if (d.liquidada) {
           btnLiqu.style.display = 'none';
         } else {
@@ -389,12 +331,13 @@
       }
     }
 
-    // Rellena la lista de archivos (si el endpoint responde)
     function renderArchivos(data){
       const lista = document.getElementById('listaArchivos');
       if (!lista) return;
+
       lista.innerHTML = '';
       document.getElementById('visorPdf').src = '';
+
       (data?.archivos || []).forEach(a => {
         const li = document.createElement('li');
         li.className = 'list-group-item list-group-item-action';
@@ -405,53 +348,205 @@
       });
     }
 
-    // --- Abrir modal al hacer clic en una tarjeta de carta ---
     document.addEventListener('click', async (e) => {
       const card = e.target.closest('.carta-mini');
       if (!card) return;
 
-      const id     = card.dataset.fianzaId;
+      const id = card.dataset.fianzaId;
       const urlDet = "{% url 'carta_detalle' 0 %}".replace('/0/', `/${id}/`);
       const urlArc = "{% url 'carta_archivos' 0 %}".replace('/0/', `/${id}/`);
 
       try {
-        // 1) Detalle (obligatorio)
         const r1 = await fetch(urlDet);
         if (!r1.ok) throw new Error('DETALLE ' + r1.status);
         const d = await r1.json();
         renderDetalle(d);
 
-        // 2) Archivos (si falla, no bloquea el modal)
         try {
           const r2 = await fetch(urlArc);
           if (r2.ok) {
             const data = await r2.json();
             renderArchivos(data);
           } else {
-            console.warn('ARCHIVOS', r2.status);
             renderArchivos({ archivos: [] });
           }
-        } catch (e2){
+        } catch (e2) {
           console.warn('ARCHIVOS fetch error', e2);
           renderArchivos({ archivos: [] });
         }
 
-        // 3) Mostrar modal SIEMPRE que el detalle haya cargado
         if (modal) modal.show();
-
-      } catch (err){
+      } catch (err) {
         console.error(err);
         alert('No se pudo cargar el detalle de la carta. (' + err.message + ')');
       }
     });
 
-    // --- Autocomplete ---
+    // =========================
+    // FIDEICOMISO
+    // =========================
+    function renderDetalleFideicomiso(d) {
+      document.getElementById('modalTituloFideicomiso').textContent =
+        `${d.empresa || '—'} – Fideicomiso ${d.entidad_fiduciaria || ''}`;
+
+      const det = document.getElementById('detalleFideicomiso');
+      det.innerHTML = `
+        <dt class="col-5">Fiduciaria</dt><dd class="col-7">${d.entidad_fiduciaria || '—'}</dd>
+        <dt class="col-5">Ejecutora</dt><dd class="col-7">${d.entidad_ejecutora || '—'}</dd>
+        <dt class="col-5">Representante</dt><dd class="col-7">${d.representante || '—'}</dd>
+        <dt class="col-5">Residente</dt><dd class="col-7">${d.residente_obra || '—'}</dd>
+        <dt class="col-5">Estado</dt><dd class="col-7">${d.estado_ejecucion || '—'}</dd>
+        <dt class="col-5">Modalidad</dt><dd class="col-7">${d.modalidad_ejecucion || '—'}</dd>
+        <dt class="col-5">Plazo</dt><dd class="col-7">${d.plazo_ejecucion || '—'}</dd>
+        <dt class="col-5">Inicio</dt><dd class="col-7">${d.fecha_inicio || '—'}</dd>
+        <dt class="col-5">Fin</dt><dd class="col-7">${d.fecha_termino || '—'}</dd>
+        <dt class="col-5">Contrato</dt><dd class="col-7">${money(d.monto_contrato_moneda, d.monto_contrato)}</dd>
+
+        <dt class="col-12 text-success fw-bold mt-2">Tributador</dt>
+        <dt class="col-5">Nombre</dt><dd class="col-7">${d.tributador_nombre || '—'}</dd>
+        <dt class="col-5">Banco</dt><dd class="col-7">${d.tributador_banco || '—'}</dd>
+        <dt class="col-5">Cuenta</dt><dd class="col-7">${d.tributador_nro_cuenta || '—'}</dd>
+        <dt class="col-5">CCI</dt><dd class="col-7">${d.tributador_nro_cci || '—'}</dd>
+
+        <dt class="col-12 text-success fw-bold mt-2">Adelanto directo</dt>
+        <dt class="col-5">Total</dt><dd class="col-7">${money(d.adelanto_directo_moneda, d.adelanto_directo_monto)}</dd>
+        <dt class="col-5">96%</dt><dd class="col-7">${money(d.adelanto_directo_moneda, d.directo_con_retencion)}</dd>
+        <dt class="col-5">Restante</dt><dd class="col-7">${money(d.adelanto_directo_moneda, d.directo_restante)}</dd>
+
+        <dt class="col-12 text-success fw-bold mt-2">Adelanto materiales</dt>
+        <dt class="col-5">Total</dt><dd class="col-7">${money(d.adelanto_materiales_moneda, d.adelanto_materiales_monto)}</dd>
+        <dt class="col-5">96%</dt><dd class="col-7">${money(d.adelanto_materiales_moneda, d.materiales_con_retencion)}</dd>
+        <dt class="col-5">Restante</dt><dd class="col-7">${money(d.adelanto_materiales_moneda, d.materiales_restante)}</dd>
+      `;
+
+      if (d.deuda_total !== null) {
+        det.insertAdjacentHTML('beforeend', `
+          <dt class="col-12 text-primary fw-bold mt-2">Deuda</dt>
+          <dt class="col-5">Total</dt><dd class="col-7">${money(d.deuda_total_moneda, d.deuda_total)}</dd>
+          <dt class="col-5">Pagado</dt><dd class="col-7">${money(d.deuda_total_moneda, d.suma_adelantos)}</dd>
+          <dt class="col-5">Resta</dt><dd class="col-7">${money(d.deuda_total_moneda, d.deuda_restante)}</dd>
+        `);
+      }
+
+      if (d.tiene_consorcio) {
+        det.insertAdjacentHTML('beforeend', `
+          <dt class="col-12 text-warning fw-bold mt-2">Datos del Consorcio</dt>
+          <dt class="col-5">Nombre</dt><dd class="col-7">${d.nombre_consorcio || '—'}</dd>
+          <dt class="col-5">Empresas</dt><dd class="col-7">${empresasEnLineasHtml(d.empresas_consorciadas)}</dd>
+          <dt class="col-5">Representante</dt><dd class="col-7">${d.representante_legal || '—'}</dd>
+          <dt class="col-5">DNI/C.E.</dt><dd class="col-7">${d.dni_representante || '—'}</dd>
+          <dt class="col-5">Independiente</dt><dd class="col-7">${d.es_independiente ? 'Sí' : 'No'}</dd>
+          ${d.es_independiente ? `<dt class="col-5">RUC Consorcio</dt><dd class="col-7">${d.ruc_consorcio || '—'}</dd>` : ''}
+        `);
+      }
+
+      if (d.correos && d.correos.length) {
+        det.insertAdjacentHTML('beforeend', `
+          <dt class="col-12 text-primary fw-bold mt-2">Correos</dt>
+          <dd class="col-12">
+            ${d.correos.map(c => `${c.propietario || '—'} – ${c.correo}`).join('<br>')}
+          </dd>
+        `);
+      }
+
+      const btnEditar = document.getElementById('btnEditarFideicomiso');
+      const btnEliminar = document.getElementById('btnEliminarFideicomiso');
+      const btnDesembolso = document.getElementById('btnDesembolsoFideicomiso');
+
+      if (btnEditar) btnEditar.href = d.url_editar || '#';
+      if (btnEliminar) btnEliminar.href = d.url_eliminar || '#';
+      if (btnDesembolso) btnDesembolso.href = d.url_desembolso || '#';
+    }
+
+    function renderDocumentosFideicomiso(data) {
+      const lista = document.getElementById('listaDocumentosFideicomiso');
+      const visor = document.getElementById('visorPdfFideicomiso');
+      const titulo = document.getElementById('tituloDocumentoFideicomiso');
+
+      if (!lista || !visor || !titulo) return;
+
+      lista.innerHTML = '';
+      visor.src = '';
+      titulo.textContent = 'Selecciona un documento';
+
+      const docs = data?.documentos || [];
+
+      docs.forEach((doc, index) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item list-group-item-action';
+        li.style.cursor = 'pointer';
+
+        li.innerHTML = `
+          <div class="fw-bold">${doc.categoria_label}</div>
+          <div class="small text-muted">${doc.nombre}</div>
+        `;
+
+        li.onclick = () => {
+          visor.src = doc.url;
+          titulo.textContent = `${doc.categoria_label} — ${doc.nombre}`;
+
+          lista.querySelectorAll('.list-group-item').forEach(item => {
+            item.classList.remove('active');
+          });
+          li.classList.add('active');
+        };
+
+        lista.appendChild(li);
+
+        if (index === 0) {
+          visor.src = doc.url;
+          titulo.textContent = `${doc.categoria_label} — ${doc.nombre}`;
+          li.classList.add('active');
+        }
+      });
+
+      if (!docs.length) {
+        titulo.textContent = 'No hay documentos cargados';
+      }
+    }
+
+    document.addEventListener('click', async (e) => {
+      const card = e.target.closest('.fidei-mini');
+      if (!card) return;
+
+      const id = card.dataset.fideicomisoId;
+      const urlDet = "{% url 'fideicomiso_detalle' 0 %}".replace('/0/', `/${id}/`);
+      const urlDocs = "{% url 'fideicomiso_documentos' 0 %}".replace('/0/', `/${id}/`);
+
+      try {
+        const r1 = await fetch(urlDet);
+        if (!r1.ok) throw new Error('DETALLE FIDEICOMISO ' + r1.status);
+        const d = await r1.json();
+        renderDetalleFideicomiso(d);
+
+        try {
+          const r2 = await fetch(urlDocs);
+          if (r2.ok) {
+            const data = await r2.json();
+            renderDocumentosFideicomiso(data);
+          } else {
+            renderDocumentosFideicomiso({ documentos: [] });
+          }
+        } catch (e2) {
+          console.warn('DOCS FIDEICOMISO fetch error', e2);
+          renderDocumentosFideicomiso({ documentos: [] });
+        }
+
+        if (fideiModal) fideiModal.show();
+      } catch (err) {
+        console.error(err);
+        alert('No se pudo cargar el detalle del fideicomiso. (' + err.message + ')');
+      }
+    });
+
+    // =========================
+    // AUTOCOMPLETE
+    // =========================
     (function(){
       const input = document.getElementById('searchInput');
-      const box   = document.getElementById('suggestions');
+      const box = document.getElementById('suggestions');
       if (!input || !box) return;
 
-      // Cierra la lista al hacer click fuera
       document.addEventListener('click', e => {
         if (!box.contains(e.target) && e.target !== input) box.innerHTML = '';
       });
@@ -485,7 +580,6 @@
           });
       });
     })();
-
   });
   </script>
 {% endblock %}

@@ -127,6 +127,120 @@ def _json_fianza(f: CartaFianza) -> dict:
 
     return data
 
+def _json_fideicomiso(f: Fideicomiso) -> dict:
+    emp_nombre = getattr(f.empresa, "nombre", "") or getattr(f.empresa, "nombre_consorcio", "(sin empresa)")
+
+    return {
+        "id": f.id,
+        "empresa": emp_nombre,
+
+        "tributador_nombre": f.tributador_nombre,
+        "tributador_banco": f.tributador_banco,
+        "tributador_nro_cuenta": f.tributador_nro_cuenta,
+        "tributador_nro_cci": f.tributador_nro_cci,
+
+        "entidad_ejecutora": f.entidad_ejecutora,
+        "entidad_fiduciaria": f.entidad_fiduciaria,
+        "representante": f.representante,
+        "residente_obra": f.residente_obra,
+        "estado_ejecucion": f.estado_ejecucion,
+        "modalidad_ejecucion": f.modalidad_ejecucion,
+        "plazo_ejecucion": f.plazo_ejecucion,
+
+        "monto_contrato_moneda": f.monto_contrato_moneda,
+        "monto_contrato": float(f.monto_contrato or 0),
+
+        "fecha_inicio": f.fecha_inicio.strftime("%d/%m/%Y") if f.fecha_inicio else "",
+        "fecha_termino": f.fecha_termino.strftime("%d/%m/%Y") if f.fecha_termino else "",
+
+        "adelanto_directo_moneda": f.adelanto_directo_moneda,
+        "adelanto_directo_monto": float(f.adelanto_directo_monto or 0),
+        "directo_con_retencion": float(f.directo_con_retencion or 0),
+        "directo_restante": float(f.directo_restante or 0),
+
+        "adelanto_materiales_moneda": f.adelanto_materiales_moneda,
+        "adelanto_materiales_monto": float(f.adelanto_materiales_monto or 0),
+        "materiales_con_retencion": float(f.materiales_con_retencion or 0),
+        "materiales_restante": float(f.materiales_restante or 0),
+
+        "tiene_consorcio": f.tiene_consorcio,
+        "nombre_consorcio": f.nombre_consorcio or "",
+        "empresas_consorciadas": f.empresas_consorciadas or "",
+        "representante_legal": f.representante_legal or "",
+        "dni_representante": f.dni_representante or "",
+        "es_independiente": f.es_independiente,
+        "ruc_consorcio": f.ruc_consorcio or "",
+
+        "deuda_total_moneda": f.deuda_total_moneda,
+        "deuda_total": float(f.deuda_total) if f.deuda_total is not None else None,
+        "suma_adelantos": float(f.suma_adelantos or 0),
+        "deuda_restante": float(f.deuda_restante) if f.deuda_restante is not None else None,
+
+        "correos": [
+            {
+                "propietario": c.propietario or "",
+                "correo": c.correo,
+            }
+            for c in f.correos.all()
+        ],
+
+        "adelantos": [
+            {
+                "fecha": a.fecha.strftime("%d/%m/%Y") if a.fecha else "—",
+                "monto": float(a.monto or 0),
+            }
+            for a in f.adelantos.all()
+        ],
+
+        "desembolsos": [
+            {
+                "tipo": d.get_tipo_display(),
+                "fecha": d.fecha.strftime("%d/%m/%Y") if d.fecha else "—",
+                "monto": float(d.monto or 0),
+            }
+            for d in f.desembolsos.all()
+        ],
+
+        "url_editar": reverse("editar_fideicomiso", args=[f.id]),
+        "url_eliminar": reverse("eliminar_fideicomiso", args=[f.id]),
+        "url_desembolso": reverse("agregar_desembolso", args=[f.id]),
+    }
+
+
+@login_required
+@role_required("master", "notifier", "fidei")
+def fideicomiso_detalle(request, fideicomiso_id):
+    fidei = get_object_or_404(
+        Fideicomiso.objects.prefetch_related("correos", "adelantos", "desembolsos"),
+        id=fideicomiso_id
+    )
+    return JsonResponse(_json_fideicomiso(fidei))
+
+
+@login_required
+@role_required("master", "notifier", "fidei")
+def fideicomiso_documentos(request, fideicomiso_id):
+    fidei = get_object_or_404(
+        Fideicomiso.objects.prefetch_related("documentos"),
+        id=fideicomiso_id
+    )
+
+    categorias = dict(DocumentoFid.CAT_CHOICES)
+    documentos = []
+
+    for d in fidei.documentos.all():
+        if not d.archivo:
+            continue
+        documentos.append({
+            "id": d.id,
+            "categoria": d.categoria,
+            "categoria_label": categorias.get(d.categoria, d.categoria),
+            "nombre": os.path.basename(d.archivo.name),
+            "url": d.archivo.url,
+        })
+
+    return JsonResponse({"documentos": documentos})
+
 # ════════════════════════════════════════════════════════════════
 # Páginas principales
 # ════════════════════════════════════════════════════════════════
@@ -143,12 +257,17 @@ def google_login(request):
 @role_required("master", "notifier", "cartas", "fidei")
 def buscar_empresa(request):
     q = request.GET.get("q", "").strip()
+
     if not q:
-        return render(request, "buscar.html", {"resultado": None})
-    resultado = resultado = (
+        return render(request, "buscar.html", {
+            "resultado": None,
+            "cartas_resultado": CartaFianza.objects.none(),
+            "fideicomisos_resultado": Fideicomiso.objects.none(),
+        })
+
+    resultado = (
         Empresa.objects
         .prefetch_related(
-            # documentos (PDF), correos y desembolsos en una sola ida al DB
             Prefetch("fideicomisos__documentos"),
             Prefetch("fideicomisos__correos"),
             Prefetch("fideicomisos__desembolsos"),
@@ -157,13 +276,39 @@ def buscar_empresa(request):
         .filter(
             Q(ruc__iexact=q) |
             Q(nombre__iexact=q) |
-            Q(nombre_gerente__iexact=q)|
-            Q(nombre_consorcio__iexact=q)         |  
+            Q(nombre_gerente__iexact=q) |
+            Q(nombre_consorcio__iexact=q) |
             Q(representante_legal__iexact=q)
         )
         .first()
     )
-    return render(request, "buscar.html", {"resultado": resultado})
+
+    cartas_resultado = CartaFianza.objects.none()
+    fideicomisos_resultado = Fideicomiso.objects.none()
+
+    if resultado:
+        cartas_resultado = (
+            CartaFianza.objects
+            .filter(Q(empresa=resultado) | Q(empresas_relacionadas=resultado))
+            .select_related("empresa")
+            .distinct()
+            .order_by("-fecha_vencimiento", "-id")
+        )
+
+        fideicomisos_resultado = (
+            Fideicomiso.objects
+            .filter(Q(empresa=resultado) | Q(empresas_relacionadas=resultado))
+            .select_related("empresa")
+            .prefetch_related("documentos", "correos", "desembolsos", "adelantos")
+            .distinct()
+            .order_by("-fecha_termino", "-id")
+        )
+
+    return render(request, "buscar.html", {
+        "resultado": resultado,
+        "cartas_resultado": cartas_resultado,
+        "fideicomisos_resultado": fideicomisos_resultado,
+    })
 
 @login_required
 @role_required("master", "notifier", "cartas", "fidei")
@@ -463,10 +608,19 @@ def editar_empresa(request, empresa_id):
 @role_required("master", "notifier")
 def eliminar_empresa(request, empresa_id):
     empresa = get_object_or_404(Empresa, id=empresa_id)
+
     if request.method == "POST":
+        if empresa.cartas_fianza.exists() or empresa.fideicomisos.exists():
+            messages.error(
+                request,
+                "No se puede eliminar esta empresa porque es dueña de una o más cartas fianza o fideicomisos."
+            )
+            return redirect("listar_empresas")
+
         empresa.delete()
         messages.success(request, "Empresa eliminada correctamente.")
         return redirect("listar_empresas")
+
     return render(request, "eliminar_empresa.html", {"empresa": empresa})
 
 # ════════════════════════════════════════════════════════════════
