@@ -30,9 +30,10 @@
                  {% for f in dia.fianzas %}
                    <div class="p-1 mb-1 border border-cie rounded-2 text-start fianza-card"
                         data-fianza-id="{{ f.id }}" style="font-size:.72rem;cursor:pointer;">
-                     <div class="fianza-line"><strong>{{ f.numero_fianza }}</strong></div>
-                     <div class="fianza-line">{{ f.aseguradora }}</div>
-                     <div class="fianza-line">{{ f.tipo_carta|upper|replace:"_> " }}</div>
+                      <div class="fianza-line"><strong>{{ f.numero_fianza }}</strong></div>
+                      <div class="fianza-line">{{ f.entidad|default:"—" }}</div>
+                      <div class="fianza-line">{{ f.aseguradora }}</div>
+                      <div class="fianza-line">{{ f.tipo_carta|upper|replace:"_> " }}</div>
                    </div>
                  {% endfor %}
                </td>
@@ -99,6 +100,13 @@
 </style>
 
 <script>
+function empresasEnLineasHtml(value) {
+  if (!value) return '—';
+  return String(value)
+    .split(/\s*(?:,|;|\n)\s*/)
+    .filter(Boolean)
+    .join('<br>');
+}
 document.querySelectorAll('.fianza-card').forEach(card=>{
   card.addEventListener('click',()=>{
     const id = card.dataset.fianzaId;
@@ -124,7 +132,7 @@ document.querySelectorAll('.fianza-card').forEach(card=>{
           det.innerHTML+=`
             <dt class="col-12 mt-2 fw-bold text-warning">Datos del Consorcio</dt>
             <dt class="col-5">Nombre</dt><dd class="col-7">${d.nombre_consorcio}</dd>
-            <dt class="col-5">Empresas</dt><dd class="col-7">${d.empresas_consorciadas}</dd>
+            <dt class="col-5">Empresas</dt><dd class="col-7">${empresasEnLineasHtml(d.empresas_consorciadas)}</dd>
             <dt class="col-5">Representante</dt><dd class="col-7">${d.representante_legal}</dd>
             <dt class="col-5">DNI/C.E.</dt><dd class="col-7">${d.dni_representante}</dd>`;
         }

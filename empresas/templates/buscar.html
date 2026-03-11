@@ -97,7 +97,7 @@
               </div>
               <div class="card-body p-2"
                   data-tipo="{{ f.tipo_completo }}">
-                <div class="fw-bold small">{{ f.numero_fianza }}</div>
+                <div class="fw-bold small">{{ f.entidad|default:"—" }}</div>
                 <div class="small text-muted">{{ f.aseguradora }}</div>
                 <div class="small">{{ f.tipo_completo }}</div>
               </div>
@@ -308,6 +308,14 @@
     // Modal bootstrap preparado de una vez
     const modalEl = document.getElementById('fianzaModal');
     const modal   = modalEl ? new bootstrap.Modal(modalEl) : null;
+    
+    function empresasEnLineasHtml(value) {
+      if (!value) return '—';
+      return String(value)
+        .split(/\s*(?:,|;|\n)\s*/)
+        .filter(Boolean)
+        .join('<br>');
+    }
 
     // Rellena el detalle del modal con el JSON de 'carta_detalle'
     function renderDetalle(d){
@@ -332,7 +340,7 @@
         det.insertAdjacentHTML('beforeend', `
           <dt class="col-12 text-warning fw-bold mt-2">Datos del Consorcio</dt>
           <dt class="col-5">Nombre</dt><dd class="col-7">${d.nombre_consorcio}</dd>
-          <dt class="col-5">Empresas</dt><dd class="col-7">${d.empresas_consorciadas}</dd>
+          <dt class="col-5">Empresas</dt><dd class="col-7">${empresasEnLineasHtml(d.empresas_consorciadas)}</dd>
           <dt class="col-5">Representante</dt><dd class="col-7">${d.representante_legal}</dd>
           <dt class="col-5">DNI/C.E.</dt><dd class="col-7">${d.dni_representante}</dd>
           <dt class="col-5">Independiente</dt><dd class="col-7">${d.es_independiente?'Sí':'No'}</dd>

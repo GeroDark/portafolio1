@@ -1,4 +1,4 @@
-{% load humanize %}
+{% load humanize cie_extras %}
 {#  templates/carta_detalle_snippet.html  #}
 <div class="mb-3">
   <h6 class="fw-bold">
@@ -19,7 +19,7 @@
     <h6 class="fw-bold"><i class="bi bi-heart-fill text-warning me-1"></i>Datos del Consorcio</h6>
     <ul class="list-unstyled small mb-0">
       <li><b>Nombre:</b> {{ carta.nombre_consorcio }}</li>
-      <li><b>Empresas:</b> {{ carta.empresas_consorciadas }}</li>
+      <li><b>Empresas:</b><br>{{ carta.empresas_consorciadas|consorcio_en_lineas|linebreaksbr }}</li>
       <li><b>Representante:</b> {{ carta.representante_legal }}</li>
       <li><b>DNI/C.E.:</b> {{ carta.dni_representante }}</li>
     </ul>

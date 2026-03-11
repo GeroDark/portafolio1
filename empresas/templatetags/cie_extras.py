@@ -1,4 +1,5 @@
 # empresas/templatetags/cie_extras.py
+import re
 from django import template
 
 register = template.Library()
@@ -29,3 +30,14 @@ def replace(value, args="_"):
         old, new = args, " "
 
     return value.replace(old, new)
+
+@register.filter
+def consorcio_en_lineas(value):
+    if not value:
+        return "—"
+
+    if not isinstance(value, str):
+        value = str(value)
+
+    partes = [p.strip() for p in re.split(r"\s*(?:,|;|\n)\s*", value) if p.strip()]
+    return "\n".join(partes) if partes else "—"
