@@ -1,0 +1,114 @@
+{{ form.orden }}
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <label class="form-label" for="{{ form.tipo_movimiento.id_for_label }}">{{ form.tipo_movimiento.label }}</label>
+        {{ form.tipo_movimiento }}
+        {% if form.tipo_movimiento.errors %}
+            <div class="text-danger small mt-1">{{ form.tipo_movimiento.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label" for="{{ form.fecha.id_for_label }}">{{ form.fecha.label }}</label>
+        {{ form.fecha }}
+        {% if form.fecha.errors %}
+            <div class="text-danger small mt-1">{{ form.fecha.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label" for="{{ form.monto.id_for_label }}">{{ form.monto.label }}</label>
+        {{ form.monto }}
+        {% if form.monto.errors %}
+            <div class="text-danger small mt-1">{{ form.monto.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label" for="{{ form.medio_pago.id_for_label }}">{{ form.medio_pago.label }}</label>
+        {{ form.medio_pago }}
+        {% if form.medio_pago.errors %}
+            <div class="text-danger small mt-1">{{ form.medio_pago.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label" for="{{ form.tipo_comprobante.id_for_label }}">{{ form.tipo_comprobante.label }}</label>
+        {{ form.tipo_comprobante }}
+        {% if form.tipo_comprobante.errors %}
+            <div class="text-danger small mt-1">{{ form.tipo_comprobante.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-8">
+        <label class="form-label" for="{{ form.observaciones.id_for_label }}">{{ form.observaciones.label }}</label>
+        {{ form.observaciones }}
+        {% if form.observaciones.errors %}
+            <div class="text-danger small mt-1">{{ form.observaciones.errors }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mt-1 comprobante-rh-fields">
+    <div class="col-md-3">
+        <div class="form-check mt-4">
+            {{ form.rh_tiene_retencion }}
+            <label class="form-check-label" for="{{ form.rh_tiene_retencion.id_for_label }}">
+                {{ form.rh_tiene_retencion.label }}
+            </label>
+        </div>
+        {% if form.rh_tiene_retencion.errors %}
+            <div class="text-danger small mt-1">{{ form.rh_tiene_retencion.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label" for="{{ form.rh_retencion_monto.id_for_label }}">{{ form.rh_retencion_monto.label }}</label>
+        {{ form.rh_retencion_monto }}
+        {% if form.rh_retencion_monto.errors %}
+            <div class="text-danger small mt-1">{{ form.rh_retencion_monto.errors }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mt-1 comprobante-factura-fields">
+    <div class="col-md-4">
+        <label class="form-label" for="{{ form.factura_modalidad.id_for_label }}">{{ form.factura_modalidad.label }}</label>
+        {{ form.factura_modalidad }}
+        {% if form.factura_modalidad.errors %}
+            <div class="text-danger small mt-1">{{ form.factura_modalidad.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4 factura-credito-fields">
+        <label class="form-label" for="{{ form.factura_fecha_vencimiento.id_for_label }}">{{ form.factura_fecha_vencimiento.label }}</label>
+        {{ form.factura_fecha_vencimiento }}
+        {% if form.factura_fecha_vencimiento.errors %}
+            <div class="text-danger small mt-1">{{ form.factura_fecha_vencimiento.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4 factura-credito-fields">
+        <div class="form-check mt-4">
+            {{ form.factura_credito_cancelado }}
+            <label class="form-check-label" for="{{ form.factura_credito_cancelado.id_for_label }}">
+                {{ form.factura_credito_cancelado.label }}
+            </label>
+        </div>
+        {% if form.factura_credito_cancelado.errors %}
+            <div class="text-danger small mt-1">{{ form.factura_credito_cancelado.errors }}</div>
+        {% endif %}
+    </div>
+</div>
+
+{% if form.DELETE %}
+    <div class="mt-3">
+        <div class="form-check">
+            {{ form.DELETE }}
+            <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">
+                Eliminar este movimiento
+            </label>
+        </div>
+    </div>
+{% endif %}

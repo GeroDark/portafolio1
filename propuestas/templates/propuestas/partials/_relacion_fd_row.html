@@ -1,0 +1,60 @@
+{{ form.orden }}
+
+<div class="row g-3 align-items-end">
+    <div class="col-md-8">
+        <label class="form-label" for="{{ form.fideicomiso.id_for_label }}">{{ form.fideicomiso.label }}</label>
+        {{ form.fideicomiso }}
+        {% if form.fideicomiso.errors %}
+            <div class="text-danger small mt-1">{{ form.fideicomiso.errors }}</div>
+        {% endif %}
+        <div class="form-text">
+            Busca por fiduciaria, ejecutora o representante.
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        {% if form.instance.pk %}
+            <label class="form-label">Orden</label>
+            <input type="text" class="form-control" value="{{ form.instance.orden }}" readonly>
+        {% else %}
+            <label class="form-label">Orden</label>
+            <input type="text" class="form-control" value="Nuevo" readonly>
+        {% endif %}
+    </div>
+
+    <div class="col-md-2">
+        {% if form.DELETE %}
+            <div class="form-check mt-4">
+                {{ form.DELETE }}
+                <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">
+                    Eliminar
+                </label>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if form.instance.pk %}
+    <div class="row g-2 mt-2 small text-muted">
+        <div class="col-md-3">
+            <strong>Fiduciaria:</strong><br>
+            {{ form.instance.snapshot_fiduciaria|default:"-" }}
+        </div>
+        <div class="col-md-3">
+            <strong>Ejecutora:</strong><br>
+            {{ form.instance.snapshot_ejecutora|default:"-" }}
+        </div>
+        <div class="col-md-2">
+            <strong>Representante:</strong><br>
+            {{ form.instance.snapshot_representante|default:"-" }}
+        </div>
+        <div class="col-md-2">
+            <strong>Residente:</strong><br>
+            {{ form.instance.snapshot_residente|default:"-" }}
+        </div>
+        <div class="col-md-2">
+            <strong>Estado:</strong><br>
+            {{ form.instance.snapshot_estado|default:"-" }}
+        </div>
+    </div>
+{% endif %}

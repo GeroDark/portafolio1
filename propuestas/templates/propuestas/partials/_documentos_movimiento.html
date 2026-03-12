@@ -1,0 +1,77 @@
+<div class="border rounded p-3 bg-light-subtle">
+    <h3 class="h6 mb-3">Documentos del movimiento</h3>
+
+    <form method="post" action="{% url 'propuestas:subir_documento' propuesta.pk %}" enctype="multipart/form-data" class="row g-3 mb-4">
+        {% csrf_token %}
+        <input type="hidden" name="movimiento_id" value="{{ movimiento.id }}">
+
+        <div class="col-md-4">
+            <label class="form-label">Categoría</label>
+            <div class="col-md-4">
+                <label class="form-label">Categoría</label>
+                <select name="categoria" class="form-select">
+                    <option value="movimiento_soporte">Soporte de movimiento</option>
+                    <option value="rh_retencion">RH retención</option>
+                    <option value="factura">Factura</option>
+                    <option value="detraccion">Detracción</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">PDF</label>
+            <input type="file" name="archivo" class="form-control" accept=".pdf" required>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Descripción</label>
+            <input type="text" name="descripcion" class="form-control" placeholder="Descripción opcional">
+        </div>
+
+        <div class="col-12">
+            <button type="submit" class="btn btn-sm btn-primary">Subir documento</button>
+        </div>
+    </form>
+
+    {% if movimiento.documentos.all %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Categoría</th>
+                        <th>Archivo</th>
+                        <th>Descripción</th>
+                        <th>Fecha</th>
+                        <th style="width: 160px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in movimiento.documentos.all %}
+                        <tr>
+                            <td>{{ doc.get_categoria_display }}</td>
+                            <td>{{ doc.nombre_original }}</td>
+                            <td>{{ doc.descripcion|default:"-" }}</td>
+                            <td>{{ doc.uploaded_at }}</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ doc.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        Ver
+                                    </a>
+
+                                    <form method="post" action="{% url 'propuestas:eliminar_documento' propuesta.pk doc.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted mb-0">No hay documentos cargados para este movimiento.</p>
+    {% endif %}
+</div>

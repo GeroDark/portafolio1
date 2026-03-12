@@ -23,7 +23,9 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('', include('empresas.urls')),  # rutas de nuestra app
     path('oauth/', include('social_django.urls', namespace='social')), 
-    path("secret-admin/", admin.site.urls)
+    path("secret-admin/", admin.site.urls),
+    path("propuestas/", include("propuestas.urls")),
+    
 ]
 
 if settings.DEBUG:

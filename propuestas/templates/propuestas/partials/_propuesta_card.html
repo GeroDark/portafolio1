@@ -1,0 +1,58 @@
+<div class="border rounded p-3 propuesta-card">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+        <div>
+            <div class="fw-semibold">{{ propuesta.codigo }}</div>
+            <div class="small text-muted">
+                {{ propuesta.get_tipo_propuesta_display }} · {{ propuesta.fecha_propuesta }}
+            </div>
+        </div>
+
+        <div>
+            {% if propuesta.estado_pago_actual == "cancelada" %}
+                <span class="badge text-bg-success">Cancelada</span>
+            {% elif propuesta.estado_pago_actual == "con_adelantos" %}
+                <span class="badge text-bg-warning">Con adelantos</span>
+            {% else %}
+                <span class="badge text-bg-secondary">Pendiente</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-2 small mb-3">
+        <div class="col-md-6">
+            <strong>Monto total:</strong><br>
+            {{ propuesta.moneda }} {{ propuesta.monto_total }}
+        </div>
+        <div class="col-md-6">
+            <strong>Total pagado:</strong><br>
+            {{ propuesta.moneda }} {{ propuesta.total_pagado }}
+        </div>
+        <div class="col-md-6">
+            <strong>Saldo pendiente:</strong><br>
+            {{ propuesta.moneda }} {{ propuesta.saldo_pendiente }}
+        </div>
+        <div class="col-md-6">
+            <strong>Facturador:</strong><br>
+            {{ propuesta.facturador_texto|default:"-" }}
+        </div>
+
+        <div class="col-md-6">
+            <strong>Relacionados:</strong><br>
+            {% if propuesta.tipo_propuesta == "CF" %}
+                {{ propuesta.relaciones_cartas.count }} carta(s)
+            {% else %}
+                {{ propuesta.relaciones_fideicomisos.count }} fideicomiso(s)
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <strong>Documentos:</strong><br>
+            {{ propuesta.documentos.count }} archivo(s)
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'propuestas:detalle' propuesta.pk %}" class="btn btn-sm btn-outline-primary">Ver detalle</a>
+        <a href="{% url 'propuestas:editar' propuesta.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+        <a href="{% url 'propuestas:eliminar' propuesta.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+    </div>
+</div>

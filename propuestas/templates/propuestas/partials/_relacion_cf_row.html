@@ -1,0 +1,60 @@
+{{ form.orden }}
+
+<div class="row g-3 align-items-end">
+    <div class="col-md-8">
+        <label class="form-label" for="{{ form.carta_fianza.id_for_label }}">{{ form.carta_fianza.label }}</label>
+        {{ form.carta_fianza }}
+        {% if form.carta_fianza.errors %}
+            <div class="text-danger small mt-1">{{ form.carta_fianza.errors }}</div>
+        {% endif %}
+        <div class="form-text">
+            Busca por número de carta, aseguradora o entidad.
+        </div>
+    </div>
+
+    <div class="col-md-2">
+        {% if form.instance.pk %}
+            <label class="form-label">Orden</label>
+            <input type="text" class="form-control" value="{{ form.instance.orden }}" readonly>
+        {% else %}
+            <label class="form-label">Orden</label>
+            <input type="text" class="form-control" value="Nuevo" readonly>
+        {% endif %}
+    </div>
+
+    <div class="col-md-2">
+        {% if form.DELETE %}
+            <div class="form-check mt-4">
+                {{ form.DELETE }}
+                <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">
+                    Eliminar
+                </label>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if form.instance.pk %}
+    <div class="row g-2 mt-2 small text-muted">
+        <div class="col-md-3">
+            <strong>Número:</strong><br>
+            {{ form.instance.snapshot_numero_carta|default:"-" }}
+        </div>
+        <div class="col-md-3">
+            <strong>Aseguradora:</strong><br>
+            {{ form.instance.snapshot_aseguradora|default:"-" }}
+        </div>
+        <div class="col-md-2">
+            <strong>Tipo:</strong><br>
+            {{ form.instance.snapshot_tipo_carta|default:"-" }}
+        </div>
+        <div class="col-md-2">
+            <strong>Monto:</strong><br>
+            {{ form.instance.snapshot_monto|default:"-" }}
+        </div>
+        <div class="col-md-2">
+            <strong>Entidad:</strong><br>
+            {{ form.instance.snapshot_entidad_beneficiaria|default:"-" }}
+        </div>
+    </div>
+{% endif %}

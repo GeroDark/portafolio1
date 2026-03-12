@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     
 
     "empresas",                  # nuestra app
+    "propuestas.apps.PropuestasConfig",
 ]
 
 # ─────────────────── Middleware ─────────────────────────────

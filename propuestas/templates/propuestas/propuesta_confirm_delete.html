@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Eliminar propuesta{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm mx-auto" style="max-width: 700px;">
+        <div class="card-body p-4">
+            <h1 class="h3 mb-3">Eliminar propuesta</h1>
+
+            <p class="mb-3">
+                Vas a eliminar la propuesta <strong>{{ propuesta.codigo }}</strong>
+                de <strong>{{ propuesta.empresa_nombre_snapshot }}</strong>.
+            </p>
+
+            <p class="text-muted">
+                Esta acción aplicará eliminación lógica, por lo que la propuesta dejará de verse en la búsqueda normal,
+                pero quedará registrada internamente.
+            </p>
+
+            <div class="border rounded p-3 mb-4 bg-light">
+                <div><strong>Tipo:</strong> {{ propuesta.get_tipo_propuesta_display }}</div>
+                <div><strong>Monto total:</strong> {{ propuesta.moneda }} {{ propuesta.monto_total }}</div>
+                <div><strong>Total pagado:</strong> {{ propuesta.moneda }} {{ propuesta.total_pagado }}</div>
+                <div><strong>Saldo pendiente:</strong> {{ propuesta.moneda }} {{ propuesta.saldo_pendiente }}</div>
+            </div>
+
+            <form method="post" class="d-flex gap-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                <a href="{% url 'propuestas:detalle' propuesta.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

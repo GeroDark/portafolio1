@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ propuesta.codigo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h1 class="mb-1">{{ propuesta.codigo }}</h1>
+            <p class="text-muted mb-0">
+                {{ propuesta.get_tipo_propuesta_display }} · {{ propuesta.empresa_nombre_snapshot }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'propuestas:buscar' %}?empresa={{ propuesta.empresa_id }}" class="btn btn-outline-secondary">
+                Volver a búsqueda
+            </a>
+            <a href="{% url 'propuestas:editar' propuesta.pk %}" class="btn btn-primary">
+                Editar
+            </a>
+            <a href="{% url 'propuestas:eliminar' propuesta.pk %}" class="btn btn-outline-danger">
+                Eliminar
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Resumen general</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <strong>Tipo:</strong><br>
+                            {{ propuesta.get_tipo_propuesta_display }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Estado:</strong><br>
+                            {{ propuesta.get_estado_pago_actual_display }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Fecha:</strong><br>
+                            {{ propuesta.fecha_propuesta }}
+                        </div>
+
+                        <div class="col-md-4">
+                            <strong>Monto total:</strong><br>
+                            {{ propuesta.moneda }} {{ propuesta.monto_total }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Total pagado:</strong><br>
+                            {{ propuesta.moneda }} {{ propuesta.total_pagado }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Saldo pendiente:</strong><br>
+                            {{ propuesta.moneda }} {{ propuesta.saldo_pendiente }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Empresa / Consorcio:</strong><br>
+                            {{ propuesta.empresa_nombre_snapshot }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Facturador:</strong><br>
+                            {{ propuesta.facturador_texto }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <strong>Representante legal:</strong><br>
+                            {{ propuesta.representante_legal_snapshot|default:"-" }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>DNI representante:</strong><br>
+                            {{ propuesta.dni_representante_snapshot|default:"-" }}
+                        </div>
+
+                        <div class="col-md-12">
+                            <strong>Observaciones:</strong><br>
+                            {{ propuesta.observaciones_generales|default:"-"|linebreaksbr }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Comisión</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <strong>Monto:</strong><br>
+                            {{ propuesta.comision_moneda }} {{ propuesta.comision_monto }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Fecha:</strong><br>
+                            {{ propuesta.comision_fecha }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Tipo:</strong><br>
+                            {{ propuesta.get_comision_tipo_display }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Cuenta:</strong><br>
+                            {{ propuesta.get_comision_cuenta_display }}
+                            {% if propuesta.comision_cuenta == "OTROS" and propuesta.comision_cuenta_otro %}
+                                - {{ propuesta.comision_cuenta_otro }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">
+                        Relacionados
+                        {% if propuesta.tipo_propuesta == "CF" %}
+                            (Cartas fianza)
+                        {% else %}
+                            (Fideicomisos)
+                        {% endif %}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    {% if propuesta.tipo_propuesta == "CF" %}
+                        {% if propuesta.relaciones_cartas.all %}
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Número</th>
+                                            <th>Aseguradora</th>
+                                            <th>Tipo</th>
+                                            <th>Monto</th>
+                                            <th>Entidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rel in propuesta.relaciones_cartas.all %}
+                                            <tr>
+                                                <td>{{ rel.orden }}</td>
+                                                <td>{{ rel.snapshot_numero_carta|default:"-" }}</td>
+                                                <td>{{ rel.snapshot_aseguradora|default:"-" }}</td>
+                                                <td>{{ rel.snapshot_tipo_carta|default:"-" }}</td>
+                                                <td>{{ rel.snapshot_monto }}</td>
+                                                <td>{{ rel.snapshot_entidad_beneficiaria|default:"-" }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No hay cartas fianza relacionadas.</p>
+                        {% endif %}
+                    {% else %}
+                        {% if propuesta.relaciones_fideicomisos.all %}
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Fiduciaria</th>
+                                            <th>Ejecutora</th>
+                                            <th>Representante</th>
+                                            <th>Residente</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rel in propuesta.relaciones_fideicomisos.all %}
+                                            <tr>
+                                                <td>{{ rel.orden }}</td>
+                                                <td>{{ rel.snapshot_fiduciaria|default:"-" }}</td>
+                                                <td>{{ rel.snapshot_ejecutora|default:"-" }}</td>
+                                                <td>{{ rel.snapshot_representante|default:"-" }}</td>
+                                                <td>{{ rel.snapshot_residente|default:"-" }}</td>
+                                                <td>{{ rel.snapshot_estado|default:"-" }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No hay fideicomisos relacionados.</p>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Movimientos de pago</h2>
+                </div>
+                <div class="card-body">
+                    {% if movimientos %}
+                        <div class="accordion" id="accordionMovimientos">
+                            {% for movimiento in movimientos %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading-{{ movimiento.id }}">
+                                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ movimiento.id }}">
+                                            {{ movimiento.get_tipo_movimiento_display }} · {{ movimiento.fecha }} · {{ propuesta.moneda }} {{ movimiento.monto }}
+                                        </button>
+                                    </h2>
+
+                                    <div id="collapse-{{ movimiento.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#accordionMovimientos">
+                                        <div class="accordion-body">
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-md-4">
+                                                    <strong>Medio de pago:</strong><br>
+                                                    {{ movimiento.get_medio_pago_display }}
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <strong>Comprobante:</strong><br>
+                                                    {{ movimiento.get_tipo_comprobante_display }}
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <strong>Orden:</strong><br>
+                                                    {{ movimiento.orden }}
+                                                </div>
+
+                                                {% if movimiento.tipo_comprobante == "RH" %}
+                                                    <div class="col-md-6">
+                                                        <strong>¿Tiene retención?:</strong><br>
+                                                        {% if movimiento.rh_tiene_retencion %}Sí{% else %}No{% endif %}
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <strong>Monto retención:</strong><br>
+                                                        {{ movimiento.rh_retencion_monto|default:"-" }}
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if movimiento.tipo_comprobante == "FACTURA" %}
+                                                    <div class="col-md-4">
+                                                        <strong>Modalidad:</strong><br>
+                                                        {{ movimiento.get_factura_modalidad_display|default:"-" }}
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <strong>Fecha vencimiento:</strong><br>
+                                                        {{ movimiento.factura_fecha_vencimiento|default:"-" }}
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <strong>Crédito cancelado:</strong><br>
+                                                        {% if movimiento.factura_credito_cancelado is None %}
+                                                            -
+                                                        {% elif movimiento.factura_credito_cancelado %}
+                                                            Sí
+                                                        {% else %}
+                                                            No
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}
+
+                                                <div class="col-md-12">
+                                                    <strong>Observaciones:</strong><br>
+                                                    {{ movimiento.observaciones|default:"-"|linebreaksbr }}
+                                                </div>
+                                            </div>
+
+                                            {% include "propuestas/partials/_documentos_movimiento.html" with propuesta=propuesta movimiento=movimiento %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No hay movimientos registrados.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Documentos generales</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'propuestas:subir_documento' propuesta.pk %}" enctype="multipart/form-data" class="mb-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="categoria" value="propuesta_general">
+
+                        <div class="mb-3">
+                            <label class="form-label">PDF</label>
+                            {{ upload_form.archivo }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            {{ upload_form.descripcion }}
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-primary">Subir documento general</button>
+                    </form>
+
+                    {% if documentos_generales %}
+                        <div class="list-group">
+                            {% for doc in documentos_generales %}
+                                <div class="list-group-item">
+                                    <div class="fw-semibold">{{ doc.nombre_original }}</div>
+                                    <div class="small text-muted mb-2">
+                                        {{ doc.get_categoria_display }} · {{ doc.uploaded_at }}
+                                    </div>
+
+                                    {% if doc.descripcion %}
+                                        <div class="small mb-2">{{ doc.descripcion }}</div>
+                                    {% endif %}
+
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ doc.archivo.url }}" target="_blank" class="btn btn-sm btn-outline-primary">Ver PDF</a>
+
+                                        <form method="post" action="{% url 'propuestas:eliminar_documento' propuesta.pk doc.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No hay documentos generales.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h2 class="h5 mb-0">Totales</h2>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2"><strong>Total adelantado:</strong> {{ propuesta.moneda }} {{ propuesta.total_adelantado }}</div>
+                    <div class="mb-2"><strong>Total cancelado:</strong> {{ propuesta.moneda }} {{ propuesta.total_cancelado }}</div>
+                    <div class="mb-2"><strong>Total pagado:</strong> {{ propuesta.moneda }} {{ propuesta.total_pagado }}</div>
+                    <div><strong>Saldo pendiente:</strong> {{ propuesta.moneda }} {{ propuesta.saldo_pendiente }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="{% static 'propuestas/propuestas.css' %}">
+{% endblock %}
