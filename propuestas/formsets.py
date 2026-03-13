@@ -161,7 +161,7 @@ PropuestaRelacionCartaFianzaFormSet = inlineformset_factory(
     PropuestaRelacionCartaFianza,
     form=PropuestaRelacionCartaFianzaForm,
     formset=BasePropuestaRelacionCartaFianzaFormSet,
-    extra=1,
+    extra=0,
     can_delete=True,
 )
 
@@ -170,7 +170,7 @@ PropuestaRelacionFideicomisoFormSet = inlineformset_factory(
     PropuestaRelacionFideicomiso,
     form=PropuestaRelacionFideicomisoForm,
     formset=BasePropuestaRelacionFideicomisoFormSet,
-    extra=1,
+    extra=0,
     can_delete=True,
 )
 
