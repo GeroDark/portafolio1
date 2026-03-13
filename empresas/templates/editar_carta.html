@@ -174,9 +174,10 @@ function agregarCampo(nombre = '', pct = '', syncHidden = true) {
   const div  = document.createElement('div');
   div.className = 'input-group mb-2';
   div.innerHTML = `
-    <input type="text"   class="form-control me-2" placeholder="Empresa" value="${nombre}">
-    <input type="number" class="form-control"      placeholder="%" min="0" max="100"
-           value="${pct}" oninput="validarPorcentajes()">
+    <input type="text" class="form-control me-2" placeholder="Empresa" value="${nombre}"
+           oninput="validarPorcentajes()" onchange="validarPorcentajes()">
+    <input type="number" class="form-control" placeholder="%" min="0" max="100"
+           value="${pct}" oninput="validarPorcentajes()" onchange="validarPorcentajes()">
     <button type="button" class="btn btn-danger"
             onclick="this.parentNode.remove(); validarPorcentajes()">×</button>`;
   cont.appendChild(div);
@@ -218,6 +219,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const adiBox  = document.getElementById('adicional_box');
   const numAdi  = document.getElementById('id_numero_adicional');
   const hiddenInput = document.getElementById('id_empresas_consorciadas');
+  const formEl = hiddenInput ? hiddenInput.form : null;
+
+  if (formEl) {
+    formEl.addEventListener('submit', () => validarPorcentajes());
+  }
 
   /* Aseguradora OTROS */
   function toggleAseg() { boxAseg.style.display = selAseg.value === 'OTROS' ? 'block' : 'none'; }
