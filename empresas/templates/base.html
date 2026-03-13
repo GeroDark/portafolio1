@@ -98,6 +98,15 @@
             <ul class="navbar-nav align-items-center">
                 {% if user.is_authenticated %}
 
+                    {% if CAN_PAGOS %}
+                        <li class="nav-item me-2">
+                            <a class="btn {% if '/propuestas/' in request.path %}btn-light active{% else %}btn-outline-light{% endif %}"
+                            href="{% url 'propuestas:buscar' %}">
+                                🧾 Propuestas
+                            </a>
+                        </li>
+                    {% endif %}
+
                     <!-- Búsqueda (todos los roles que tengan al menos algún módulo) -->
                     {% if CAN_CARTAS or CAN_FIDEI or CAN_PAGOS %}
                         <li class="nav-item me-2">

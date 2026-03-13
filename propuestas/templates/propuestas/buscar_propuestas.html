@@ -1,152 +1,188 @@
 {% extends "base.html" %}
-
+{% load static %}
+{% block page_bg %}buscar{% endblock %}
 {% block title %}Propuestas{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-        <div>
-            <h1 class="mb-1">Búsqueda de propuestas</h1>
-            <p class="text-muted mb-0">Busca una empresa o consorcio para ver sus propuestas de carta fianza y fideicomiso.</p>
-        </div>
+<h2 class="mb-4 text-center fw-bold text-uppercase">🧾 Búsqueda&nbsp;de&nbsp;propuestas</h2>
 
-        <div class="d-flex gap-2">
-            {% if empresa %}
-                <a href="{% url 'propuestas:crear_cf' %}?empresa={{ empresa.id }}" class="btn btn-primary">
-                    Agregar propuesta de carta fianza
-                </a>
-                <a href="{% url 'propuestas:crear_fd' %}?empresa={{ empresa.id }}" class="btn btn-outline-primary">
-                    Agregar propuesta de fideicomiso
-                </a>
-            {% else %}
-                <a href="{% url 'propuestas:crear_cf' %}" class="btn btn-primary">
-                    Agregar propuesta de carta fianza
-                </a>
-                <a href="{% url 'propuestas:crear_fd' %}" class="btn btn-outline-primary">
-                    Agregar propuesta de fideicomiso
-                </a>
-            {% endif %}
-        </div>
+<form method="get" action="{% url 'propuestas:buscar' %}" class="row justify-content-center g-2 mb-5 position-relative">
+  <div class="col-md-6 position-relative">
+    <input
+      id="searchInput"
+      type="text"
+      name="q"
+      class="form-control form-control-lg shadow-sm rounded-pill"
+      placeholder="RUC, nombre, gerente, consorcio o representante…"
+      autocomplete="off"
+      value="{% if empresa %}{{ empresa.nombre_consorcio|default:empresa.nombre }}{% else %}{{ request.GET.q }}{% endif %}"
+      required>
+    <ul
+      id="suggestions"
+      class="list-group position-absolute w-100"
+      style="z-index:1000; top:100%;"></ul>
+  </div>
+
+  <div class="col-md-auto">
+    <button type="submit"
+      class="btn btn-lg rounded-pill text-white px-4"
+      style="background:#F26522;">
+      Buscar
+    </button>
+  </div>
+</form>
+
+{% if empresa %}
+  
+
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header text-white" style="background:#F26522;">
+      <strong>📄 Datos Generales de la Empresa / Consorcio</strong>
+    </div>
+    <div class="card-body small">
+      <p><b>Nombre:</b> {{ empresa.nombre_consorcio|default:empresa.nombre|default:"—" }}</p>
+      <p><b>RUC:</b> {{ empresa.ruc|default:"—" }}</p>
+      <p><b>Es consorcio:</b> {{ empresa.es_consorcio|yesno:"Sí,No" }}</p>
+      <p><b>Representante Legal:</b> {{ empresa.representante_legal|default:"—" }}</p>
+      <p><b>DNI/C.E. del Representante:</b> {{ empresa.dni_representante|default:"—" }}</p>
+      <p><b>Correo:</b> {{ empresa.correo|default:"—" }}</p>
+      <p><b>Teléfono:</b> {{ empresa.telefono|default:"—" }}</p>
+      <p><b>Observaciones:</b> {{ empresa.observaciones|default:"—" }}</p>
+    </div>
+  </div>
+  <div class="text-end mt-3 d-flex justify-content-end gap-2 mb-4 flex-wrap">
+    <a href="{% url 'propuestas:crear_cf' %}?empresa={{ empresa.id }}"
+        class="btn btn-lg rounded-pill text-white px-4 shadow-sm"
+        style="background:#F26522; border:none;">
+        <i class="bi bi-plus-lg me-1"></i> Agregar propuesta de carta fianza
+    </a>
+
+    <a href="{% url 'propuestas:crear_fd' %}?empresa={{ empresa.id }}"
+        class="btn btn-lg rounded-pill text-white px-4 shadow-sm"
+        style="background:#4B4F56; border:none;">
+        <i class="bi bi-plus-lg me-1"></i> Agregar propuesta de fideicomiso
+    </a>
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-5">
-                    <label for="{{ form.empresa.id_for_label }}" class="form-label">{{ form.empresa.label }}</label>
-                    {{ form.empresa }}
-                    {% if form.empresa.errors %}
-                        <div class="text-danger small mt-1">{{ form.empresa.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="col-md-5">
-                    <label for="{{ form.q.id_for_label }}" class="form-label">{{ form.q.label }}</label>
-                    {{ form.q }}
-                    {% if form.q.errors %}
-                        <div class="text-danger small mt-1">{{ form.q.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="col-md-2 d-grid">
-                    <button type="submit" class="btn btn-dark">Buscar</button>
-                </div>
-            </form>
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header text-white d-flex align-items-center gap-2" style="background:#F26522;">
+        <span
+        class="d-inline-flex align-items-center justify-content-center rounded-circle"
+        style="width:1.6rem;height:1.6rem; background:#fff; color:#F26522; border:2px solid #000;">
+        <i class="bi bi-shield-lock-fill" style="font-size:.9rem;"></i>
+        </span>
+        <strong>Propuestas de Carta Fianza ({{ propuestas_cf|length }})</strong>
+    </div>
+    <div class="card-body bg-white">
+        {% if propuestas_cf %}
+        <div class="d-flex flex-column gap-3 propuestas-lista">
+            {% for propuesta in propuestas_cf %}
+            {% include "propuestas/partials/_propuesta_card.html" with propuesta=propuesta %}
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="alert alert-warning small mb-0">
+            ⚠️ Esta empresa no tiene propuestas de carta fianza registradas.
+        </div>
+        {% endif %}
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header text-white d-flex align-items-center gap-2" style="background:#4B4F56;">
+        <span
+        class="d-inline-flex align-items-center justify-content-center rounded-circle"
+        style="width:1.6rem;height:1.6rem; background:#fff; border:2px solid #000;">
+        <i class="bi bi-bank2" style="font-size:.9rem; color:#4B4F56;"></i>
+        </span>
+        <strong>Propuestas de Fideicomiso ({{ propuestas_fd|length }})</strong>
     </div>
 
-    {% if empresa %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h2 class="h4 mb-3">Empresa / Consorcio seleccionado</h2>
-
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <strong>Nombre:</strong><br>
-                        {{ empresa.nombre_consorcio|default:empresa.nombre }}
-                    </div>
-                    <div class="col-md-3">
-                        <strong>RUC:</strong><br>
-                        {{ empresa.ruc|default:"-" }}
-                    </div>
-                    <div class="col-md-2">
-                        <strong>Consorcio:</strong><br>
-                        {% if empresa.es_consorcio %}Sí{% else %}No{% endif %}
-                    </div>
-                    <div class="col-md-3">
-                        <strong>Representante:</strong><br>
-                        {{ empresa.representante_legal|default:"-" }}
-                    </div>
-                </div>
-            </div>
+    <div class="card-body bg-white">
+        {% if propuestas_fd %}
+        <div class="d-flex flex-column gap-3 propuestas-lista">
+            {% for propuesta in propuestas_fd %}
+            {% include "propuestas/partials/_propuesta_card.html" with propuesta=propuesta %}
+            {% endfor %}
         </div>
-
-        <div class="row g-4">
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <h3 class="h5 mb-0">Propuestas de Carta Fianza</h3>
-                    </div>
-                    <div class="card-body">
-                        {% if propuestas_cf %}
-                            <div class="d-flex flex-column gap-3">
-                                {% for propuesta in propuestas_cf %}
-                                    {% include "propuestas/partials/_propuesta_card.html" with propuesta=propuesta %}
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">No hay propuestas de carta fianza registradas para esta empresa.</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <h3 class="h5 mb-0">Propuestas de Fideicomiso</h3>
-                    </div>
-                    <div class="card-body">
-                        {% if propuestas_fd %}
-                            <div class="d-flex flex-column gap-3">
-                                {% for propuesta in propuestas_fd %}
-                                    {% include "propuestas/partials/_propuesta_card.html" with propuesta=propuesta %}
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">No hay propuestas de fideicomiso registradas para esta empresa.</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+        {% else %}
+        <div class="alert alert-secondary small mb-0 border-0" style="background:#eef1f4; color:#495057;">
+            ℹ️ Esta empresa no tiene propuestas de fideicomiso registradas.
         </div>
-    {% elif empresas_resultado %}
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h2 class="h5 mb-3">Resultados de búsqueda</h2>
+        {% endif %}
+    </div>
+  </div>
 
-                <div class="list-group">
-                    {% for item in empresas_resultado %}
-                        <a href="{% url 'propuestas:buscar' %}?empresa={{ item.id }}" class="list-group-item list-group-item-action">
-                            <div class="fw-semibold">{{ item.nombre_consorcio|default:item.nombre }}</div>
-                            <div class="small text-muted">
-                                RUC: {{ item.ruc|default:"-" }}
-                                {% if item.es_consorcio %}
-                                    · Consorcio
-                                {% endif %}
-                                {% if item.representante_legal %}
-                                    · Representante: {{ item.representante_legal }}
-                                {% endif %}
-                            </div>
-                        </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    {% elif q %}
-        <div class="alert alert-warning">
-            No se encontraron empresas o consorcios con ese criterio.
-        </div>
-    {% endif %}
-</div>
+{% elif empresas_resultado %}
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header text-white" style="background:#F26522;">
+      <strong>📄 Resultados de búsqueda</strong>
+    </div>
+    <div class="card-body small">
+      <div class="list-group">
+        {% for item in empresas_resultado %}
+          <a href="{% url 'propuestas:buscar' %}?empresa={{ item.id }}"
+             class="list-group-item list-group-item-action">
+            <strong>{{ item.nombre_consorcio|default:item.nombre }}</strong><br>
+            <small class="text-muted">
+              RUC: {{ item.ruc|default:"-" }}
+              {% if item.es_consorcio %} · Consorcio{% endif %}
+              {% if item.representante_legal %} · Representante: {{ item.representante_legal }}{% endif %}
+            </small>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+{% elif request.GET.q %}
+  <div class="alert alert-danger">❌ No se encontró ninguna empresa o consorcio con ese criterio.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('searchInput');
+      const box = document.getElementById('suggestions');
+      if (!input || !box) return;
+
+      document.addEventListener('click', e => {
+        if (!box.contains(e.target) && e.target !== input) box.innerHTML = '';
+      });
+
+      input.addEventListener('input', () => {
+        const term = input.value.trim();
+        if (term.length < 2) {
+          box.innerHTML = '';
+          return;
+        }
+
+        fetch(`/empresa/autocomplete/?term=${encodeURIComponent(term)}`)
+          .then(r => {
+            if (!r.ok) throw new Error('AUTOCOMPLETE ' + r.status);
+            return r.json();
+          })
+          .then(data => {
+            box.innerHTML = '';
+            (data || []).forEach(item => {
+              const li = document.createElement('li');
+              li.className = 'list-group-item list-group-item-action';
+              li.textContent = item.label;
+              li.addEventListener('click', () => {
+                input.value = item.value;
+                box.innerHTML = '';
+                input.form.submit();
+              });
+              box.appendChild(li);
+            });
+          })
+          .catch(err => {
+            console.warn(err);
+            box.innerHTML = '';
+          });
+      });
+    });
+  </script>
 {% endblock %}

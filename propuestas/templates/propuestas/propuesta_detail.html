@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-
+{% load humanize %}
 {% block title %}{{ propuesta.codigo }}{% endblock %}
 
 {% block content %}
@@ -13,14 +13,14 @@
             </p>
         </div>
 
-        <div class="d-flex gap-2">
-            <a href="{% url 'propuestas:buscar' %}?empresa={{ propuesta.empresa_id }}" class="btn btn-outline-secondary">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'propuestas:buscar' %}?empresa={{ propuesta.empresa_id }}" class="btn btn-propuesta-back">
                 Volver a búsqueda
             </a>
-            <a href="{% url 'propuestas:editar' propuesta.pk %}" class="btn btn-primary">
+            <a href="{% url 'propuestas:editar' propuesta.pk %}" class="btn btn-propuesta-edit">
                 Editar
             </a>
-            <a href="{% url 'propuestas:eliminar' propuesta.pk %}" class="btn btn-outline-danger">
+            <a href="{% url 'propuestas:eliminar' propuesta.pk %}" class="btn btn-propuesta-delete">
                 Eliminar
             </a>
         </div>
@@ -28,8 +28,8 @@
 
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
+            <div class="card shadow-sm mb-4 propuesta-card">
+                <div class="card-header propuesta-card-header propuesta-card-header-main">
                     <h2 class="h5 mb-0">Resumen general</h2>
                 </div>
                 <div class="card-body">
@@ -86,8 +86,8 @@
                 </div>
             </div>
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
+            <div class="card shadow-sm mb-4 propuesta-card">
+                <div class="card-header propuesta-card-header propuesta-card-header-comision">
                     <h2 class="h5 mb-0">Comisión</h2>
                 </div>
                 <div class="card-body">
@@ -115,8 +115,8 @@
                 </div>
             </div>
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
+            <div class="card shadow-sm mb-5 propuesta-card">
+                <div class="card-header propuesta-card-header propuesta-card-header-rel">
                     <h2 class="h5 mb-0">
                         Relacionados
                         {% if propuesta.tipo_propuesta == "CF" %}
@@ -193,8 +193,8 @@
                 </div>
             </div>
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
+            <div class="card shadow-sm mb-4 propuesta-card">
+                <div class="card-header propuesta-card-header propuesta-card-header-mov">
                     <h2 class="h5 mb-0">Movimientos de pago</h2>
                 </div>
                 <div class="card-body">
@@ -276,8 +276,8 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
+            <div class="card shadow-sm mb-4 propuesta-card">
+                <div class="card-header propuesta-card-header propuesta-card-header-doc">
                     <h2 class="h5 mb-0">Documentos generales</h2>
                 </div>
                 <div class="card-body">
@@ -287,7 +287,8 @@
 
                         <div class="mb-3">
                             <label class="form-label">PDF</label>
-                            {{ upload_form.archivo }}
+                            <input type="file" name="archivo" class="form-control" accept=".pdf,application/pdf" multiple required>
+                            <div class="form-text">Puedes seleccionar uno o varios PDFs.</div>
                         </div>
 
                         <div class="mb-3">
@@ -333,6 +334,8 @@
                     <h2 class="h5 mb-0">Totales</h2>
                 </div>
                 <div class="card-body">
+                    
+                    <p><strong>Monto total:</strong> {{ propuesta.moneda }} {{ propuesta.monto_total|floatformat:2|intcomma }}</p>
                     <div class="mb-2"><strong>Total adelantado:</strong> {{ propuesta.moneda }} {{ propuesta.total_adelantado }}</div>
                     <div class="mb-2"><strong>Total cancelado:</strong> {{ propuesta.moneda }} {{ propuesta.total_cancelado }}</div>
                     <div class="mb-2"><strong>Total pagado:</strong> {{ propuesta.moneda }} {{ propuesta.total_pagado }}</div>

@@ -1,35 +1,68 @@
 <div class="border rounded p-3 bg-light-subtle">
     <h3 class="h6 mb-3">Documentos del movimiento</h3>
 
-    <form method="post" action="{% url 'propuestas:subir_documento' propuesta.pk %}" enctype="multipart/form-data" class="row g-3 mb-4">
+    <form method="post"
+          action="{% url 'propuestas:subir_documento' propuesta.pk %}"
+          enctype="multipart/form-data"
+          class="row g-3 mb-4">
         {% csrf_token %}
         <input type="hidden" name="movimiento_id" value="{{ movimiento.id }}">
 
         <div class="col-md-4">
             <label class="form-label">Categoría</label>
-            <div class="col-md-4">
-                <label class="form-label">Categoría</label>
-                <select name="categoria" class="form-select">
-                    <option value="movimiento_soporte">Soporte de movimiento</option>
-                    <option value="rh_retencion">RH retención</option>
-                    <option value="factura">Factura</option>
-                    <option value="detraccion">Detracción</option>
+            {% with tipo=movimiento.tipo_comprobante|default:''|lower modalidad=movimiento.factura_modalidad|default:''|lower %}
+                <select name="categoria" class="form-select" required>
+                    {% if tipo == "sin_comprobante" or tipo == "sin comprobante" %}
+                        <option value="movimiento_soporte">Sin comprobante</option>
+
+                    {% elif tipo == "rh" %}
+                        {% if movimiento.rh_tiene_retencion %}
+                            <option value="rh_retencion">RH retención</option>
+                        {% else %}
+                            <option value="movimiento_soporte">Sin comprobante</option>
+                        {% endif %}
+
+                    {% elif tipo == "factura" %}
+                        <option value="factura">Factura</option>
+
+                        {% if modalidad == "contado" or movimiento.factura_credito_cancelado %}
+                            <option value="detraccion">Detracción</option>
+                        {% endif %}
+
+                    {% else %}
+                        <option value="movimiento_soporte">Sin comprobante</option>
+                    {% endif %}
                 </select>
-            </div>
+            {% endwith %}
         </div>
 
         <div class="col-md-4">
             <label class="form-label">PDF</label>
-            <input type="file" name="archivo" class="form-control" accept=".pdf" required>
+            <input
+                type="file"
+                name="archivo"
+                class="form-control"
+                accept=".pdf,application/pdf"
+                multiple
+                required
+            >
+            <div class="form-text">Puedes seleccionar uno o varios PDFs.</div>
         </div>
 
         <div class="col-md-4">
             <label class="form-label">Descripción</label>
-            <input type="text" name="descripcion" class="form-control" placeholder="Descripción opcional">
+            <input
+                type="text"
+                name="descripcion"
+                class="form-control"
+                placeholder="Descripción opcional"
+            >
         </div>
 
         <div class="col-12">
-            <button type="submit" class="btn btn-sm btn-primary">Subir documento</button>
+            <button type="submit" class="btn btn-sm btn-primary">
+                Subir documento
+            </button>
         </div>
     </form>
 
@@ -48,7 +81,13 @@
                 <tbody>
                     {% for doc in movimiento.documentos.all %}
                         <tr>
-                            <td>{{ doc.get_categoria_display }}</td>
+                            <td>
+                                {% if doc.categoria == "movimiento_soporte" and movimiento.tipo_comprobante == "SIN_COMPROBANTE" %}
+                                    Sin comprobante
+                                {% else %}
+                                    {{ doc.get_categoria_display }}
+                                {% endif %}
+                            </td>
                             <td>{{ doc.nombre_original }}</td>
                             <td>{{ doc.descripcion|default:"-" }}</td>
                             <td>{{ doc.uploaded_at }}</td>

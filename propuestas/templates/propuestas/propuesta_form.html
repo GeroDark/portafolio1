@@ -4,7 +4,7 @@
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 propuesta-form-page">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
             <h1 class="mb-1">{{ titulo }}</h1>
@@ -18,7 +18,9 @@
         </div>
 
         <div>
-            <a href="{% url 'propuestas:buscar' %}" class="btn btn-outline-secondary">Volver a búsqueda</a>
+            <a href="{% url 'propuestas:buscar' %}?empresa={{ empresa_retorno_id }}" class="btn btn-propuesta-back">
+                Volver a búsqueda
+            </a>
         </div>
     </div>
 
@@ -45,60 +47,78 @@
 
         <div class="row g-4">
             <div class="col-lg-8">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white">
+                <div class="card shadow-sm mb-4 propuesta-card">
+                    <div class="card-header propuesta-card-header propuesta-card-header-main">
                         <h2 class="h5 mb-0">1. Datos base</h2>
                     </div>
+
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.empresa.id_for_label }}">{{ form.empresa.label }}</label>
-                                {{ form.empresa }}
-                                {% if form.empresa.help_text %}
-                                    <div class="form-text">{{ form.empresa.help_text }}</div>
-                                {% endif %}
-                                {% if form.empresa.errors %}
-                                    <div class="text-danger small mt-1">{{ form.empresa.errors }}</div>
-                                {% endif %}
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.empresa.id_for_label }}">{{ form.empresa.label }}</label>
+                            {{ form.empresa }}
+                            {% if form.empresa.help_text %}
+                            <div class="form-text">{{ form.empresa.help_text }}</div>
+                            {% endif %}
+                            {% if form.empresa.errors %}
+                            <div class="text-danger small mt-1">{{ form.empresa.errors }}</div>
+                            {% endif %}
+                        </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ form.facturador_texto.id_for_label }}">{{ form.facturador_texto.label }}</label>
-                                {{ form.facturador_texto }}
-                                {% if form.facturador_texto.errors %}
-                                    <div class="text-danger small mt-1">{{ form.facturador_texto.errors }}</div>
-                                {% endif %}
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="{{ form.facturador_texto.id_for_label }}">{{ form.facturador_texto.label }}</label>
+                            {{ form.facturador_texto }}
+                            {% if form.facturador_texto.errors %}
+                            <div class="text-danger small mt-1">{{ form.facturador_texto.errors }}</div>
+                            {% endif %}
+                        </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label" for="{{ form.monto_total.id_for_label }}">{{ form.monto_total.label }}</label>
-                                {{ form.monto_total }}
-                                {% if form.monto_total.errors %}
-                                    <div class="text-danger small mt-1">{{ form.monto_total.errors }}</div>
-                                {% endif %}
+                        <div class="col-md-3 d-flex align-items-center">
+                            <div class="form-check mt-4">
+                            {{ form.es_consorcio_manual }}
+                            <label class="form-check-label ms-2" for="{{ form.es_consorcio_manual.id_for_label }}">
+                                {{ form.es_consorcio_manual.label }}
+                            </label>
                             </div>
+                        </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label" for="{{ form.moneda.id_for_label }}">{{ form.moneda.label }}</label>
-                                {{ form.moneda }}
-                                {% if form.moneda.errors %}
-                                    <div class="text-danger small mt-1">{{ form.moneda.errors }}</div>
-                                {% endif %}
-                            </div>
+                        <div class="col-md-5" id="consorcio-representante-wrapper">
+                            <label class="form-label" for="{{ form.representante_legal_manual.id_for_label }}">{{ form.representante_legal_manual.label }}</label>
+                            {{ form.representante_legal_manual }}
+                            {% if form.representante_legal_manual.errors %}
+                            <div class="text-danger small mt-1">{{ form.representante_legal_manual.errors }}</div>
+                            {% endif %}
+                        </div>
 
-                            <div class="col-md-12">
-                                <label class="form-label" for="{{ form.observaciones_generales.id_for_label }}">{{ form.observaciones_generales.label }}</label>
-                                {{ form.observaciones_generales }}
-                                {% if form.observaciones_generales.errors %}
-                                    <div class="text-danger small mt-1">{{ form.observaciones_generales.errors }}</div>
-                                {% endif %}
-                            </div>
+                        <div class="col-md-4" id="consorcio-dni-wrapper">
+                            <label class="form-label" for="{{ form.dni_representante_manual.id_for_label }}">{{ form.dni_representante_manual.label }}</label>
+                            {{ form.dni_representante_manual }}
+                            {% if form.dni_representante_manual.errors %}
+                            <div class="text-danger small mt-1">{{ form.dni_representante_manual.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.monto_total.id_for_label }}">{{ form.monto_total.label }}</label>
+                            {{ form.monto_total }}
+                            {% if form.monto_total.errors %}
+                            <div class="text-danger small mt-1">{{ form.monto_total.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label" for="{{ form.moneda.id_for_label }}">{{ form.moneda.label }}</label>
+                            {{ form.moneda }}
+                            {% if form.moneda.errors %}
+                            <div class="text-danger small mt-1">{{ form.moneda.errors }}</div>
+                            {% endif %}
+                        </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white">
+                <div class="card shadow-sm mb-4 propuesta-card">
+                    <div class="card-header propuesta-card-header propuesta-card-header-comision">
                         <h2 class="h5 mb-0">2. Comisión</h2>
                     </div>
                     <div class="card-body">
@@ -154,8 +174,8 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <div class="card shadow-sm mb-4 propuesta-card propuesta-card-relaciones">
+                    <div class="card-header propuesta-card-header propuesta-card-header-rel d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h2 class="h5 mb-0">
                             3. Relacionados
                             {% if tipo_propuesta == "CF" %}
@@ -164,8 +184,12 @@
                                 (Fideicomisos)
                             {% endif %}
                         </h2>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-add-formset="rel">
-                            Agregar fila
+                        <button type="button" class="btn btn-propuesta-add-rel" data-add-formset="rel">
+                            {% if tipo_propuesta == 'CF' %}
+                                Agregar carta fianza
+                            {% else %}
+                                Agregar fideicomiso
+                            {% endif %}
                         </button>
                     </div>
                     <div class="card-body">
@@ -202,10 +226,10 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <div class="card shadow-sm mb-4 propuesta-card propuesta-card-movimientos">
+                    <div class="card-header propuesta-card-header propuesta-card-header-mov d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h2 class="h5 mb-0">4. Pagos / Movimientos</h2>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-add-formset="mov">
+                        <button type="button" class="btn btn-propuesta-add-mov" data-add-formset="mov">
                             Agregar movimiento
                         </button>
                     </div>
@@ -234,22 +258,21 @@
                     </div>
                 </div>
 
-                <div class="d-flex gap-2 mb-5">
+                <div class="form-actions-propuesta">
                     <button type="submit" class="btn btn-success">
                         {% if modo == "editar" %}Guardar cambios{% else %}Crear propuesta{% endif %}
                     </button>
 
-                    {% if propuesta %}
-                        <a href="{% url 'propuestas:detalle' propuesta.pk %}" class="btn btn-outline-secondary">Cancelar</a>
-                    {% else %}
-                        <a href="{% url 'propuestas:buscar' %}" class="btn btn-outline-secondary">Cancelar</a>
-                    {% endif %}
+                    <a href="{% url 'propuestas:buscar' %}?empresa={{ empresa_retorno_id }}"
+                    class="btn btn-propuesta-cancel">
+                        Cancelar
+                    </a>
                 </div>
             </div>
 
             <div class="col-lg-4">
-                <div class="card shadow-sm sticky-top" style="top: 1rem;">
-                    <div class="card-header bg-white">
+                <div class="card shadow-sm mb-4 propuesta-card">
+                    <div class="card-header propuesta-card-header propuesta-card-header-total">
                         <h2 class="h5 mb-0">Resumen</h2>
                     </div>
                     <div class="card-body">
@@ -303,8 +326,8 @@
                 </div>
 
                 {% if modo == "editar" %}
-                    <div class="card shadow-sm mt-4">
-                        <div class="card-header bg-white">
+                    <div class="card shadow-sm propuesta-card">
+                        <div class="card-header propuesta-card-header propuesta-card-header-doc">
                             <h3 class="h6 mb-0">Documentos</h3>
                         </div>
                         <div class="card-body">
@@ -321,4 +344,235 @@
 
 <link rel="stylesheet" href="{% static 'propuestas/propuestas.css' %}">
 <script src="{% static 'propuestas/propuestas.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const empresaField = document.getElementById("id_empresa");
+  const consorcioCheck = document.getElementById("id_es_consorcio_manual");
+  const consorcioRepWrapper = document.getElementById("consorcio-representante-wrapper");
+  const consorcioDniWrapper = document.getElementById("consorcio-dni-wrapper");
+  const cuentaField = document.getElementById("id_comision_cuenta");
+  const cuentaOtroWrapper = document.getElementById("comision-cuenta-otro-wrapper");
+
+  function bySuffix(root, suffix) {
+    return root.querySelector(`[id$="${suffix}"]`);
+  }
+
+  function toggleConsorcioExtras() {
+    if (!consorcioCheck) return;
+    const visible = consorcioCheck.checked;
+    if (consorcioRepWrapper) consorcioRepWrapper.classList.toggle("d-none", !visible);
+    if (consorcioDniWrapper) consorcioDniWrapper.classList.toggle("d-none", !visible);
+  }
+
+  function toggleCuentaOtro() {
+    if (!cuentaField || !cuentaOtroWrapper) return;
+    const visible = cuentaField.value === "OTROS";
+    cuentaOtroWrapper.classList.toggle("d-none", !visible);
+  }
+
+  function toggleMovimientoBlock(item) {
+    const tipoComprobante = bySuffix(item, "-tipo_comprobante");
+    const rhCheck = bySuffix(item, "-rh_tiene_retencion");
+    const rhBlock = item.querySelector(".js-rh-block");
+    const rhMonto = item.querySelector(".js-rh-retencion-monto");
+    const facturaBlock = item.querySelector(".js-factura-block");
+    const facturaModalidad = bySuffix(item, "-factura_modalidad");
+    const facturaCreditoBlocks = item.querySelectorAll(".js-factura-credito-block");
+
+    const comprobante = tipoComprobante ? tipoComprobante.value : "";
+
+    if (rhBlock) rhBlock.classList.toggle("d-none", comprobante !== "RH");
+    if (rhMonto) rhMonto.classList.toggle("d-none", !(comprobante === "RH" && rhCheck && rhCheck.checked));
+    if (facturaBlock) facturaBlock.classList.toggle("d-none", comprobante !== "FACTURA");
+
+    const esCredito = comprobante === "FACTURA" && facturaModalidad && facturaModalidad.value === "credito";
+    facturaCreditoBlocks.forEach((el) => el.classList.toggle("d-none", !esCredito));
+  }
+
+  function renderCartaPreview(item, carta) {
+    const preview = item.querySelector(".js-carta-preview");
+    if (!preview) return;
+
+    preview.classList.remove("d-none");
+    preview.querySelector(".js-preview-numero").textContent = carta.numero_fianza || "-";
+    preview.querySelector(".js-preview-aseguradora").textContent = carta.aseguradora || "-";
+    preview.querySelector(".js-preview-tipo").textContent = carta.tipo_carta || "-";
+    preview.querySelector(".js-preview-monto").textContent = carta.monto || "-";
+    preview.querySelector(".js-preview-entidad").textContent = carta.entidad || "-";
+  }
+
+  function clearCartaPreview(item) {
+    const preview = item.querySelector(".js-carta-preview");
+    if (!preview) return;
+    preview.classList.add("d-none");
+    preview.querySelector(".js-preview-numero").textContent = "-";
+    preview.querySelector(".js-preview-aseguradora").textContent = "-";
+    preview.querySelector(".js-preview-tipo").textContent = "-";
+    preview.querySelector(".js-preview-monto").textContent = "-";
+    preview.querySelector(".js-preview-entidad").textContent = "-";
+  }
+
+  async function fetchCartas(term) {
+    if (!empresaField || !empresaField.value) return [];
+    const url = `/propuestas/ajax/cartas-fianza/?term=${encodeURIComponent(term)}&empresa=${encodeURIComponent(empresaField.value)}`;
+    const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.results || [];
+  }
+
+  function bindRelacionCfItem(item) {
+    if (!item || item.dataset.boundCf === "1") return;
+
+    const searchInput = item.querySelector(".js-carta-search");
+    const suggestions = item.querySelector(".js-carta-suggestions");
+    const hiddenSelect = bySuffix(item, "-carta_fianza");
+    const deleteField = bySuffix(item, "-DELETE");
+    const removeBtn = item.querySelector(".js-remove-relacion");
+
+    if (!searchInput || !suggestions || !hiddenSelect) return;
+
+    let debounceTimer = null;
+
+    function closeSuggestions() {
+      suggestions.innerHTML = "";
+    }
+
+    function setSelectedCarta(carta) {
+        const optionLabel = `${carta.numero_fianza || ""} - ${carta.aseguradora || ""} - ${carta.entidad || ""}`
+            .replace(/^ - | - $/g, "")
+            .trim();
+
+        let option = Array.from(hiddenSelect.options).find(
+            (opt) => opt.value === String(carta.id)
+        );
+
+        if (!option) {
+            option = new Option(optionLabel, String(carta.id), true, true);
+            hiddenSelect.add(option);
+        } else {
+            option.selected = true;
+            hiddenSelect.value = String(carta.id);
+        }
+
+        Array.from(hiddenSelect.options).forEach((opt) => {
+            opt.selected = opt.value === String(carta.id);
+        });
+
+        hiddenSelect.value = String(carta.id);
+        hiddenSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+        searchInput.value = optionLabel;
+        renderCartaPreview(item, carta);
+        closeSuggestions();
+    }
+
+    searchInput.addEventListener("input", () => {
+        const term = searchInput.value.trim();
+
+        hiddenSelect.value = "";
+        Array.from(hiddenSelect.options).forEach((opt) => {
+            opt.selected = false;
+        });
+
+        clearCartaPreview(item);
+
+      clearTimeout(debounceTimer);
+
+      if (term.length < 2) {
+        closeSuggestions();
+        return;
+      }
+
+      debounceTimer = setTimeout(async () => {
+        const cartas = await fetchCartas(term);
+        suggestions.innerHTML = "";
+
+        cartas.forEach((carta) => {
+          const li = document.createElement("li");
+          li.className = "list-group-item list-group-item-action";
+          li.style.cursor = "pointer";
+          li.innerHTML = `
+            <div class="fw-semibold">${carta.numero_fianza || "-"}</div>
+            <div class="small text-muted">${carta.aseguradora || "-"} · ${carta.entidad || "-"}</div>
+          `;
+          li.addEventListener("click", () => setSelectedCarta(carta));
+          suggestions.appendChild(li);
+        });
+      }, 220);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!suggestions.contains(e.target) && e.target !== searchInput) {
+        closeSuggestions();
+      }
+    });
+
+    if (removeBtn) {
+      removeBtn.addEventListener("click", () => {
+        if (deleteField) {
+          deleteField.checked = true;
+        }
+        const wrapper = item.closest(".formset-item");
+        if (wrapper) {
+          wrapper.classList.add("d-none");
+        }
+      });
+    }
+
+    item.dataset.boundCf = "1";
+  }
+
+  function bindMovimientoItem(item) {
+    if (!item || item.dataset.boundMovCustom === "1") return;
+
+    const tipoComprobante = bySuffix(item, "-tipo_comprobante");
+    const rhCheck = bySuffix(item, "-rh_tiene_retencion");
+    const facturaModalidad = bySuffix(item, "-factura_modalidad");
+    const deleteField = bySuffix(item, "-DELETE");
+    const removeBtn = item.querySelector(".js-remove-movimiento");
+
+    [tipoComprobante, rhCheck, facturaModalidad].forEach((field) => {
+      if (field) {
+        field.addEventListener("change", () => toggleMovimientoBlock(item));
+      }
+    });
+
+    if (removeBtn) {
+      removeBtn.addEventListener("click", () => {
+        if (deleteField) {
+          deleteField.checked = true;
+        }
+        item.classList.add("d-none");
+      });
+    }
+
+    toggleMovimientoBlock(item);
+    item.dataset.boundMovCustom = "1";
+  }
+
+  function initCustomBindings() {
+    document.querySelectorAll(".js-relacion-cf-item").forEach(bindRelacionCfItem);
+    document.querySelectorAll(".movimiento-item").forEach(bindMovimientoItem);
+    toggleConsorcioExtras();
+    toggleCuentaOtro();
+  }
+
+  if (consorcioCheck) {
+    consorcioCheck.addEventListener("change", toggleConsorcioExtras);
+  }
+
+  if (cuentaField) {
+    cuentaField.addEventListener("change", toggleCuentaOtro);
+  }
+
+  document.querySelectorAll('[data-add-formset="rel"], [data-add-formset="mov"]').forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setTimeout(initCustomBindings, 0);
+    });
+  });
+
+  initCustomBindings();
+});
+</script>
 {% endblock %}

@@ -44,9 +44,42 @@ def buscar_empresas_para_propuestas(query: str, limit: int = 20):
 
     return qs.order_by("nombre", "nombre_consorcio")[:limit]
 
+def cartas_fianza_para_empresa(empresa_id: int | None):
+    if not empresa_id:
+        return CartaFianza.objects.none()
 
-def buscar_cartas_fianza(query: str, limit: int = 20):
-    qs = CartaFianza.objects.select_related("empresa").all()
+    empresa = Empresa.objects.filter(pk=empresa_id).first()
+    if not empresa:
+        return CartaFianza.objects.none()
+
+    # Cartas propias de la empresa seleccionada
+    qs = CartaFianza.objects.select_related("empresa").filter(empresa_id=empresa_id)
+
+    # Si la empresa NO es consorcio, incluir también cartas del consorcio
+    # donde esta empresa aparece como consorciada.
+    if not bool(getattr(empresa, "es_consorcio", False)):
+        nombre_empresa = getattr(empresa, "nombre", "") or ""
+        ruc_empresa = getattr(empresa, "ruc", "") or ""
+
+        filtros_consorcio = Q(empresa__es_consorcio=True)
+        filtros_texto = Q()
+
+        if nombre_empresa:
+            filtros_texto |= Q(empresa__empresas_consorciadas__icontains=nombre_empresa)
+
+        if ruc_empresa:
+            filtros_texto |= Q(empresa__empresas_consorciadas__icontains=ruc_empresa)
+
+        if filtros_texto:
+            qs = qs | CartaFianza.objects.select_related("empresa").filter(
+                filtros_consorcio & filtros_texto
+            )
+
+    return qs.distinct()
+
+
+def buscar_cartas_fianza(query: str, limit: int = 20, empresa_id: int | None = None):
+    qs = cartas_fianza_para_empresa(empresa_id)
 
     if query:
         filtros_propios = _build_or_query(
@@ -60,7 +93,6 @@ def buscar_cartas_fianza(query: str, limit: int = 20):
                 "tipo_carta",
             ],
         )
-
         filtros_empresa = Q()
         empresa_fields = _existing_model_fields(Empresa)
         for field_name in ["nombre", "nombre_consorcio", "ruc"]:
@@ -69,8 +101,7 @@ def buscar_cartas_fianza(query: str, limit: int = 20):
 
         qs = qs.filter(filtros_propios | filtros_empresa)
 
-    return qs.order_by("-id")[:limit]
-
+    return qs.order_by("-id").distinct()[:limit]
 
 def buscar_fideicomisos(query: str, limit: int = 20):
     qs = Fideicomiso.objects.select_related("empresa").all()

@@ -16,6 +16,7 @@ from .models import (
     PropuestaRelacionFideicomiso,
 )
 from .services import snapshot_empresa
+from .selectors import cartas_fianza_para_empresa
 
 
 INPUT_CLASS = "form-control"
@@ -73,6 +74,21 @@ class BuscarPropuestasForm(BaseStyledFormMixin, forms.Form):
 
 
 class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
+    es_consorcio_manual = forms.BooleanField(
+        required=False,
+        label="¿Es consorcio?",
+    )
+    representante_legal_manual = forms.CharField(
+        required=False,
+        label="Representante legal",
+        max_length=200,
+    )
+    dni_representante_manual = forms.CharField(
+        required=False,
+        label="DNI / C.E. del representante",
+        max_length=20,
+    )
+
     class Meta:
         model = Propuesta
         fields = [
@@ -86,11 +102,9 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             "comision_tipo",
             "comision_cuenta",
             "comision_cuenta_otro",
-            "observaciones_generales",
         ]
         widgets = {
-            "comision_fecha": forms.DateInput(attrs={"type": "date"}),
-            "observaciones_generales": forms.Textarea(attrs={"rows": 3}),
+            "comision_fecha": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
         }
         labels = {
             "empresa": "Empresa / Consorcio",
@@ -103,7 +117,6 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             "comision_tipo": "Tipo de comisión",
             "comision_cuenta": "Cuenta",
             "comision_cuenta_otro": "Especifique otra cuenta",
-            "observaciones_generales": "Observaciones generales",
         }
 
     fixed_tipo_propuesta = None
@@ -114,41 +127,63 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
 
         self.fields["empresa"].queryset = Empresa.objects.all().order_by("nombre", "nombre_consorcio")
         self.fields["comision_cuenta_otro"].required = False
+        self.fields["representante_legal_manual"].required = False
+        self.fields["dni_representante_manual"].required = False
+        self.fields["comision_fecha"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+        self.fields["comision_fecha"].widget.format = "%Y-%m-%d"
+
         self.apply_bootstrap_classes()
 
         self.fields["empresa"].widget.attrs.update(
             {"data-autocomplete-url": "/propuestas/ajax/empresas/"}
         )
 
+        empresa_actual = None
+        if getattr(self.instance, "empresa_id", None):
+            empresa_actual = self.instance.empresa
+        else:
+            empresa_inicial = self.initial.get("empresa")
+            if empresa_inicial:
+                try:
+                    empresa_actual = Empresa.objects.get(pk=empresa_inicial)
+                except Empresa.DoesNotExist:
+                    empresa_actual = None
+
         if self.instance and self.instance.pk:
-            self.fields["empresa"].help_text = "Cambiar la empresa actualizará el snapshot de la propuesta."
+            self.fields["es_consorcio_manual"].initial = self.instance.es_consorcio_snapshot
+            self.fields["representante_legal_manual"].initial = self.instance.representante_legal_snapshot
+            self.fields["dni_representante_manual"].initial = self.instance.dni_representante_snapshot
+            self.fields["empresa"].help_text = "Selecciona la empresa o consorcio de la propuesta."
+        elif empresa_actual:
+            data_snapshot = snapshot_empresa(empresa_actual)
+            self.fields["es_consorcio_manual"].initial = data_snapshot.get("es_consorcio_snapshot", False)
+            self.fields["representante_legal_manual"].initial = data_snapshot.get("representante_legal_snapshot", "")
+            self.fields["dni_representante_manual"].initial = data_snapshot.get("dni_representante_snapshot", "")
+            self.fields["empresa"].help_text = "Selecciona la empresa o consorcio de la propuesta."
         else:
             self.fields["empresa"].help_text = "Selecciona la empresa o consorcio de la propuesta."
 
     def clean(self):
         cleaned_data = super().clean()
+
         cuenta = cleaned_data.get("comision_cuenta")
         cuenta_otro = (cleaned_data.get("comision_cuenta_otro") or "").strip()
-        empresa = cleaned_data.get("empresa")
+
+        es_consorcio = bool(cleaned_data.get("es_consorcio_manual"))
+        representante = (cleaned_data.get("representante_legal_manual") or "").strip()
+        dni = (cleaned_data.get("dni_representante_manual") or "").strip()
 
         if cuenta == Propuesta.ComisionCuenta.OTROS and not cuenta_otro:
             self.add_error("comision_cuenta_otro", "Debes especificar la cuenta cuando eliges 'Otros'.")
 
-        if empresa:
-            data_snapshot = snapshot_empresa(empresa)
-            es_consorcio = data_snapshot.get("es_consorcio_snapshot", False)
-            representante = data_snapshot.get("representante_legal_snapshot", "")
-            dni = data_snapshot.get("dni_representante_snapshot", "")
-
-            if es_consorcio:
-                if not representante:
-                    raise ValidationError(
-                        "La empresa seleccionada figura como consorcio, pero no tiene representante legal registrado."
-                    )
-                if not dni:
-                    raise ValidationError(
-                        "La empresa seleccionada figura como consorcio, pero no tiene DNI/C.E. registrado."
-                    )
+        if es_consorcio:
+            if not representante:
+                self.add_error("representante_legal_manual", "Debes indicar el representante legal.")
+            if not dni:
+                self.add_error("dni_representante_manual", "Debes indicar el DNI / C.E. del representante.")
+        else:
+            cleaned_data["representante_legal_manual"] = ""
+            cleaned_data["dni_representante_manual"] = ""
 
         return cleaned_data
 
@@ -161,6 +196,21 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
         if instance.empresa_id:
             instance.sync_snapshot_empresa()
 
+        instance.es_consorcio_snapshot = bool(self.cleaned_data.get("es_consorcio_manual"))
+        instance.representante_legal_snapshot = (
+            (self.cleaned_data.get("representante_legal_manual") or "").strip()
+            if instance.es_consorcio_snapshot
+            else ""
+        )
+        instance.dni_representante_snapshot = (
+            (self.cleaned_data.get("dni_representante_manual") or "").strip()
+            if instance.es_consorcio_snapshot
+            else ""
+        )
+
+        # ya no se usa en pantalla
+        instance.observaciones_generales = ""
+
         if self.request_user:
             if not instance.pk and not instance.creado_por_id:
                 instance.creado_por = self.request_user
@@ -170,7 +220,6 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             instance.save()
 
         return instance
-
 
 class PropuestaCFForm(PropuestaBaseForm):
     fixed_tipo_propuesta = Propuesta.TipoPropuesta.CARTA_FIANZA
@@ -183,10 +232,7 @@ class PropuestaFDForm(PropuestaBaseForm):
 class PropuestaRelacionCartaFianzaForm(BaseStyledFormMixin, forms.ModelForm):
     class Meta:
         model = PropuestaRelacionCartaFianza
-        fields = ["carta_fianza", "orden"]
-        widgets = {
-            "orden": forms.HiddenInput(),
-        }
+        fields = ["carta_fianza"]
         labels = {
             "carta_fianza": "Carta fianza",
         }
@@ -197,10 +243,19 @@ class PropuestaRelacionCartaFianzaForm(BaseStyledFormMixin, forms.ModelForm):
 
         self.propuesta = propuesta or getattr(self.instance, "propuesta", None)
 
-        self.fields["orden"].required = False
-        self.fields["carta_fianza"].queryset = CartaFianza.objects.select_related("empresa").all().order_by("-id")
+        empresa_id = None
+        if self.propuesta and getattr(self.propuesta, "empresa_id", None):
+            empresa_id = self.propuesta.empresa_id
+        elif getattr(self.instance, "propuesta_id", None):
+            empresa_id = self.instance.propuesta.empresa_id
+
+        qs = cartas_fianza_para_empresa(empresa_id)
+
+        self.fields["carta_fianza"].queryset = qs.order_by("-id")
         self.fields["carta_fianza"].widget.attrs.update(
-            {"data-autocomplete-url": "/propuestas/ajax/cartas-fianza/"}
+            {
+                "data-autocomplete-url": "/propuestas/ajax/cartas-fianza/",
+            }
         )
 
         self.apply_bootstrap_classes()
@@ -212,7 +267,16 @@ class PropuestaRelacionCartaFianzaForm(BaseStyledFormMixin, forms.ModelForm):
         if self.propuesta and self.propuesta.tipo_propuesta != Propuesta.TipoPropuesta.CARTA_FIANZA:
             raise ValidationError("Solo una propuesta de Carta Fianza puede tener cartas relacionadas.")
 
-        # Solo consultar BD si la propuesta ya existe en base de datos
+        if self.propuesta and carta and getattr(self.propuesta, "empresa_id", None):
+            ids_validos = set(
+                cartas_fianza_para_empresa(self.propuesta.empresa_id).values_list("id", flat=True)
+            )
+            if carta.id not in ids_validos:
+                self.add_error(
+                    "carta_fianza",
+                    "Solo puedes agregar cartas fianza de la empresa seleccionada o compartidas por su consorcio."
+                )
+
         if self.propuesta and self.propuesta.pk and carta:
             qs = PropuestaRelacionCartaFianza.objects.filter(
                 propuesta_id=self.propuesta.pk,
@@ -227,21 +291,22 @@ class PropuestaRelacionCartaFianzaForm(BaseStyledFormMixin, forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
+
         if self.propuesta and not instance.propuesta_id:
             instance.propuesta = self.propuesta
 
+        if not instance.pk:
+            instance.orden = 0
+
         if commit:
             instance.save()
-        return instance
 
+        return instance
 
 class PropuestaRelacionFideicomisoForm(BaseStyledFormMixin, forms.ModelForm):
     class Meta:
         model = PropuestaRelacionFideicomiso
-        fields = ["fideicomiso", "orden"]
-        widgets = {
-            "orden": forms.HiddenInput(),
-        }
+        fields = ["fideicomiso"]
         labels = {
             "fideicomiso": "Fideicomiso",
         }
@@ -252,10 +317,23 @@ class PropuestaRelacionFideicomisoForm(BaseStyledFormMixin, forms.ModelForm):
 
         self.propuesta = propuesta or getattr(self.instance, "propuesta", None)
 
-        self.fields["orden"].required = False
-        self.fields["fideicomiso"].queryset = Fideicomiso.objects.select_related("empresa").all().order_by("-id")
+        empresa_id = None
+        if self.propuesta and getattr(self.propuesta, "empresa_id", None):
+            empresa_id = self.propuesta.empresa_id
+        elif getattr(self.instance, "propuesta_id", None):
+            empresa_id = self.instance.propuesta.empresa_id
+
+        qs = Fideicomiso.objects.select_related("empresa").all()
+        if empresa_id:
+            qs = qs.filter(empresa_id=empresa_id)
+        else:
+            qs = qs.none()
+
+        self.fields["fideicomiso"].queryset = qs.order_by("-id")
         self.fields["fideicomiso"].widget.attrs.update(
-            {"data-autocomplete-url": "/propuestas/ajax/fideicomisos/"}
+            {
+                "data-autocomplete-url": "/propuestas/ajax/fideicomisos/",
+            }
         )
 
         self.apply_bootstrap_classes()
@@ -267,7 +345,10 @@ class PropuestaRelacionFideicomisoForm(BaseStyledFormMixin, forms.ModelForm):
         if self.propuesta and self.propuesta.tipo_propuesta != Propuesta.TipoPropuesta.FIDEICOMISO:
             raise ValidationError("Solo una propuesta de Fideicomiso puede tener fideicomisos relacionados.")
 
-        # Solo consultar BD si la propuesta ya existe en base de datos
+        if self.propuesta and fideicomiso and getattr(self.propuesta, "empresa_id", None):
+            if fideicomiso.empresa_id != self.propuesta.empresa_id:
+                self.add_error("fideicomiso", "Solo puedes agregar fideicomisos de la empresa seleccionada.")
+
         if self.propuesta and self.propuesta.pk and fideicomiso:
             qs = PropuestaRelacionFideicomiso.objects.filter(
                 propuesta_id=self.propuesta.pk,
@@ -282,20 +363,23 @@ class PropuestaRelacionFideicomisoForm(BaseStyledFormMixin, forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
+
         if self.propuesta and not instance.propuesta_id:
             instance.propuesta = self.propuesta
 
+        if not instance.pk:
+            instance.orden = 0
+
         if commit:
             instance.save()
-        return instance
 
+        return instance
 
 class PropuestaMovimientoPagoForm(BaseStyledFormMixin, forms.ModelForm):
     class Meta:
         model = PropuestaMovimientoPago
         fields = [
             "tipo_movimiento",
-            "orden",
             "fecha",
             "monto",
             "medio_pago",
@@ -308,9 +392,8 @@ class PropuestaMovimientoPagoForm(BaseStyledFormMixin, forms.ModelForm):
             "factura_credito_cancelado",
         ]
         widgets = {
-            "orden": forms.HiddenInput(),
-            "fecha": forms.DateInput(attrs={"type": "date"}),
-            "factura_fecha_vencimiento": forms.DateInput(attrs={"type": "date"}),
+            "fecha": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "factura_fecha_vencimiento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
@@ -331,11 +414,16 @@ class PropuestaMovimientoPagoForm(BaseStyledFormMixin, forms.ModelForm):
         self.propuesta = kwargs.pop("propuesta", None)
         super().__init__(*args, **kwargs)
 
-        self.fields["orden"].required = False
+        
         self.fields["rh_retencion_monto"].required = False
         self.fields["factura_modalidad"].required = False
         self.fields["factura_fecha_vencimiento"].required = False
         self.fields["factura_credito_cancelado"].required = False
+        self.fields["fecha"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+        self.fields["fecha"].widget.format = "%Y-%m-%d"
+
+        self.fields["factura_fecha_vencimiento"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+        self.fields["factura_fecha_vencimiento"].widget.format = "%Y-%m-%d"
 
         self.apply_bootstrap_classes()
 
@@ -343,8 +431,6 @@ class PropuestaMovimientoPagoForm(BaseStyledFormMixin, forms.ModelForm):
         cleaned_data = super().clean()
 
         tipo_comprobante = cleaned_data.get("tipo_comprobante")
-        tipo_movimiento = cleaned_data.get("tipo_movimiento")
-        monto = cleaned_data.get("monto")
         rh_tiene_retencion = cleaned_data.get("rh_tiene_retencion")
         rh_retencion_monto = cleaned_data.get("rh_retencion_monto")
         factura_modalidad = cleaned_data.get("factura_modalidad")
@@ -356,28 +442,6 @@ class PropuestaMovimientoPagoForm(BaseStyledFormMixin, forms.ModelForm):
 
         if not self.propuesta:
             raise ValidationError("No se pudo determinar la propuesta del movimiento.")
-
-        # Solo consultar BD si la propuesta ya existe
-        if self.propuesta.pk:
-            qs = PropuestaMovimientoPago.objects.filter(propuesta_id=self.propuesta.pk)
-            if self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
-
-            total_existente = qs.aggregate(total=Sum("monto")).get("total") or Decimal("0.00")
-            restante = self.propuesta.monto_total - total_existente
-
-            if monto and monto > restante:
-                self.add_error("monto", "Este movimiento supera el monto total disponible de la propuesta.")
-
-            if tipo_movimiento == PropuestaMovimientoPago.TipoMovimiento.CANCELACION:
-                if qs.filter(tipo_movimiento=PropuestaMovimientoPago.TipoMovimiento.CANCELACION).exists():
-                    self.add_error("tipo_movimiento", "Solo puede existir una cancelación por propuesta.")
-                if monto and monto != restante:
-                    self.add_error("monto", "La cancelación debe cerrar exactamente el saldo restante.")
-
-            if tipo_movimiento == PropuestaMovimientoPago.TipoMovimiento.ADELANTO:
-                if qs.filter(tipo_movimiento=PropuestaMovimientoPago.TipoMovimiento.CANCELACION).exists():
-                    self.add_error("tipo_movimiento", "No puedes agregar adelantos después de una cancelación.")
 
         if tipo_comprobante == PropuestaMovimientoPago.TipoComprobante.RH:
             if factura_modalidad:
@@ -426,6 +490,9 @@ class PropuestaMovimientoPagoForm(BaseStyledFormMixin, forms.ModelForm):
         if self.propuesta and not instance.propuesta_id:
             instance.propuesta = self.propuesta
 
+        if not instance.pk:
+            instance.orden = 0
+
         if commit:
             instance.save()
 
@@ -451,6 +518,13 @@ class PropuestaDocumentoForm(BaseStyledFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.apply_bootstrap_classes()
 
+        # Importante: asignar a la instancia ANTES de is_valid()/full_clean()
+        if self.propuesta is not None:
+            self.instance.propuesta = self.propuesta
+
+        if self.movimiento is not None:
+            self.instance.movimiento = self.movimiento
+
     def clean_archivo(self):
         archivo = self.cleaned_data.get("archivo")
         if archivo and not archivo.name.lower().endswith(".pdf"):
@@ -461,11 +535,37 @@ class PropuestaDocumentoForm(BaseStyledFormMixin, forms.ModelForm):
         cleaned_data = super().clean()
         categoria = cleaned_data.get("categoria")
 
-        if self.movimiento is None and categoria != PropuestaDocumento.Categoria.PROPUESTA_GENERAL:
-            raise ValidationError("Esta categoría requiere un movimiento asociado.")
+        if self.movimiento is None:
+            if categoria != PropuestaDocumento.Categoria.PROPUESTA_GENERAL:
+                raise ValidationError("Esta categoría requiere un movimiento asociado.")
+            return cleaned_data
 
-        if self.movimiento is not None and categoria == PropuestaDocumento.Categoria.PROPUESTA_GENERAL:
+        if categoria == PropuestaDocumento.Categoria.PROPUESTA_GENERAL:
             raise ValidationError("La categoría 'Propuesta general' no debe ligarse a un movimiento.")
+
+        if categoria == PropuestaDocumento.Categoria.RH_RETENCION:
+            if (
+                self.movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.RH
+                or not self.movimiento.rh_tiene_retencion
+            ):
+                raise ValidationError("Solo puedes subir 'RH retención' cuando el movimiento es RH con retención.")
+
+        if categoria == PropuestaDocumento.Categoria.FACTURA:
+            if self.movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.FACTURA:
+                raise ValidationError("Solo puedes subir 'Factura' cuando el movimiento tiene comprobante Factura.")
+
+        if categoria == PropuestaDocumento.Categoria.DETRACCION:
+            if self.movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.FACTURA:
+                raise ValidationError("Solo puedes subir 'Detracción' cuando el movimiento tiene comprobante Factura.")
+            if (
+                self.movimiento.factura_modalidad == PropuestaMovimientoPago.FacturaModalidad.CREDITO
+                and self.movimiento.factura_credito_cancelado is not True
+            ):
+                raise ValidationError("En factura a crédito, la detracción solo puede subirse cuando el crédito ya fue cancelado.")
+
+        if categoria == PropuestaDocumento.Categoria.MOVIMIENTO_SOPORTE:
+            if self.movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.SIN_COMPROBANTE:
+                raise ValidationError("La categoría 'Sin comprobante' solo puede usarse cuando el movimiento fue registrado sin comprobante.")
 
         return cleaned_data
 

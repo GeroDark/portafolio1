@@ -218,13 +218,9 @@ class Propuesta(models.Model):
         if self.saldo_pendiente < Decimal("0.00"):
             self.saldo_pendiente = Decimal("0.00")
 
-        tiene_cancelacion = self.movimientos.filter(
-            tipo_movimiento=PropuestaMovimientoPago.TipoMovimiento.CANCELACION
-        ).exists()
-
-        if self.total_pagado == Decimal("0.00"):
+        if self.total_pagado <= Decimal("0.00"):
             self.estado_pago_actual = self.EstadoPago.PENDIENTE
-        elif tiene_cancelacion and self.saldo_pendiente == Decimal("0.00"):
+        elif (self.monto_total or Decimal("0.00")) > Decimal("0.00") and self.total_pagado >= self.monto_total:
             self.estado_pago_actual = self.EstadoPago.CANCELADA
         else:
             self.estado_pago_actual = self.EstadoPago.CON_ADELANTOS
@@ -253,8 +249,7 @@ class Propuesta(models.Model):
             if not self.dni_representante_snapshot.strip():
                 errors["dni_representante_snapshot"] = "El DNI/C.E. es obligatorio para consorcio."
 
-        if self.monto_total and self.total_pagado and self.total_pagado > self.monto_total:
-            errors["monto_total"] = "El monto total no puede ser menor que lo ya pagado."
+        
 
         if errors:
             raise ValidationError(errors)
@@ -263,8 +258,7 @@ class Propuesta(models.Model):
         if self.empresa_id and not self.empresa_nombre_snapshot:
             self.sync_snapshot_empresa()
 
-        if self.monto_total and self.total_pagado and self.total_pagado > self.monto_total:
-            raise ValidationError("El total pagado no puede superar el monto total de la propuesta.")
+        
 
         if not self.saldo_pendiente and self.monto_total:
             self.saldo_pendiente = self.monto_total - (self.total_pagado or Decimal("0.00"))
@@ -527,24 +521,7 @@ class PropuestaMovimientoPago(models.Model):
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
 
-            total_otro = qs.aggregate(total=Sum("monto")).get("total") or Decimal("0.00")
-            restante = (self.propuesta.monto_total or Decimal("0.00")) - total_otro
-
-            if self.monto and self.monto > restante:
-                errors["monto"] = "Este movimiento supera el monto total disponible de la propuesta."
-
-            if self.tipo_movimiento == self.TipoMovimiento.CANCELACION:
-                existe_cancelacion = qs.filter(tipo_movimiento=self.TipoMovimiento.CANCELACION).exists()
-                if existe_cancelacion:
-                    errors["tipo_movimiento"] = "Solo puede existir una cancelación por propuesta."
-
-                if self.monto and self.monto != restante:
-                    errors["monto"] = "La cancelación debe cerrar exactamente el saldo restante."
-
-            if self.tipo_movimiento == self.TipoMovimiento.ADELANTO:
-                ya_cancelada = qs.filter(tipo_movimiento=self.TipoMovimiento.CANCELACION).exists()
-                if ya_cancelada:
-                    errors["tipo_movimiento"] = "No puedes agregar adelantos después de una cancelación."
+            
 
         # Validaciones por comprobante
         if self.tipo_comprobante == self.TipoComprobante.RH:
@@ -671,12 +648,38 @@ class PropuestaDocumento(models.Model):
         if self.categoria == self.Categoria.PROPUESTA_GENERAL and self.movimiento_id:
             errors["categoria"] = "La categoría 'propuesta general' no debe ligarse a un movimiento."
 
-        if self.categoria in {
-            self.Categoria.RH_RETENCION,
-            self.Categoria.FACTURA,
-            self.Categoria.DETRACCION,
-        } and not self.movimiento_id:
-            raise ValidationError("Esta categoría requiere un movimiento asociado.")
+        if self.movimiento_id is None:
+            if self.categoria != self.Categoria.PROPUESTA_GENERAL:
+                raise ValidationError("Esta categoría requiere un movimiento asociado.")
+            if errors:
+                raise ValidationError(errors)
+            return
+
+        movimiento = self.movimiento
+
+        if self.categoria == self.Categoria.MOVIMIENTO_SOPORTE:
+            if movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.SIN_COMPROBANTE:
+             raise ValidationError("La categoría 'Sin comprobante' solo puede usarse cuando el movimiento fue registrado sin comprobante.")
+
+        if self.categoria == self.Categoria.RH_RETENCION:
+            if (
+                movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.RH
+                or not movimiento.rh_tiene_retencion
+            ):
+                raise ValidationError("Solo puedes subir 'RH retención' cuando el movimiento es RH con retención.")
+
+        if self.categoria == self.Categoria.FACTURA:
+            if movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.FACTURA:
+                raise ValidationError("Solo puedes subir 'Factura' cuando el movimiento tiene comprobante Factura.")
+
+        if self.categoria == self.Categoria.DETRACCION:
+            if movimiento.tipo_comprobante != PropuestaMovimientoPago.TipoComprobante.FACTURA:
+                raise ValidationError("Solo puedes subir 'Detracción' cuando el movimiento tiene comprobante Factura.")
+            if (
+                movimiento.factura_modalidad == PropuestaMovimientoPago.FacturaModalidad.CREDITO
+                and movimiento.factura_credito_cancelado is not True
+            ):
+                raise ValidationError("En factura a crédito, la detracción solo puede subirse cuando el crédito ya fue cancelado.")
 
         if errors:
             raise ValidationError(errors)

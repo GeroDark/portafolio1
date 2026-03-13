@@ -1,5 +1,8 @@
-from django.forms import BaseInlineFormSet, inlineformset_factory
+from decimal import Decimal
+
 from django import forms
+from django.forms import BaseInlineFormSet, inlineformset_factory
+
 from .forms import (
     PropuestaMovimientoPagoForm,
     PropuestaRelacionCartaFianzaForm,
@@ -34,8 +37,9 @@ class BasePropuestaRelacionCartaFianzaFormSet(BaseInlineFormSet):
         for form in self.forms:
             if not hasattr(form, "cleaned_data"):
                 continue
-            if form.cleaned_data.get("DELETE"):
+            if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
+
             carta = form.cleaned_data.get("carta_fianza")
             if not carta:
                 continue
@@ -46,8 +50,7 @@ class BasePropuestaRelacionCartaFianzaFormSet(BaseInlineFormSet):
                 form.add_error("carta_fianza", "Esta carta fianza está repetida en la propuesta.")
             repetidos.add(carta.pk)
 
-        # Solo exigimos al menos una relación cuando la propuesta ya está siendo guardada como CF
-        if self.instance.tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA and activos == 0:
+        if activos == 0:
             raise forms.ValidationError("Debes agregar al menos una carta fianza a la propuesta.")
 
 
@@ -72,8 +75,9 @@ class BasePropuestaRelacionFideicomisoFormSet(BaseInlineFormSet):
         for form in self.forms:
             if not hasattr(form, "cleaned_data"):
                 continue
-            if form.cleaned_data.get("DELETE"):
+            if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
+
             fideicomiso = form.cleaned_data.get("fideicomiso")
             if not fideicomiso:
                 continue
@@ -84,7 +88,7 @@ class BasePropuestaRelacionFideicomisoFormSet(BaseInlineFormSet):
                 form.add_error("fideicomiso", "Este fideicomiso está repetido en la propuesta.")
             repetidos.add(fideicomiso.pk)
 
-        if self.instance.tipo_propuesta == Propuesta.TipoPropuesta.FIDEICOMISO and activos == 0:
+        if activos == 0:
             raise forms.ValidationError("Debes agregar al menos un fideicomiso a la propuesta.")
 
 
@@ -100,28 +104,56 @@ class BasePropuestaMovimientoPagoFormSet(BaseInlineFormSet):
         if not self.instance:
             return
 
-        total = 0
-        cancelaciones = 0
+        monto_total = self.instance.monto_total or Decimal("0.00")
+        activos = []
 
         for form in self.forms:
             if not hasattr(form, "cleaned_data"):
                 continue
-            if form.cleaned_data.get("DELETE"):
+            if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
 
-            monto = form.cleaned_data.get("monto") or 0
             tipo_movimiento = form.cleaned_data.get("tipo_movimiento")
+            monto = form.cleaned_data.get("monto")
+
+            # ignorar formularios realmente vacíos
+            if not tipo_movimiento and not monto:
+                continue
+
+            activos.append((form, form.cleaned_data))
+
+        total = Decimal("0.00")
+        cancelaciones = 0
+        cancelacion_index = None
+        total_antes_cancelacion = Decimal("0.00")
+
+        for idx, (form, cleaned) in enumerate(activos):
+            monto = cleaned.get("monto") or Decimal("0.00")
+            tipo_movimiento = cleaned.get("tipo_movimiento")
 
             total += monto
 
+            if total > monto_total:
+                form.add_error("monto", "La suma de movimientos no puede superar el monto total de la propuesta.")
+
             if tipo_movimiento == PropuestaMovimientoPago.TipoMovimiento.CANCELACION:
                 cancelaciones += 1
-
-        if total > self.instance.monto_total:
-            raise forms.ValidationError("La suma de movimientos no puede superar el monto total de la propuesta.")
+                cancelacion_index = idx
+                total_antes_cancelacion = total - monto
 
         if cancelaciones > 1:
             raise forms.ValidationError("Solo puede existir una cancelación por propuesta.")
+
+        if cancelacion_index is not None:
+            cancel_form, cancel_cleaned = activos[cancelacion_index]
+            cancel_monto = cancel_cleaned.get("monto") or Decimal("0.00")
+            restante = monto_total - total_antes_cancelacion
+
+            if cancel_monto != restante:
+                cancel_form.add_error("monto", "La cancelación debe cerrar exactamente el saldo restante.")
+
+            if cancelacion_index != len(activos) - 1:
+                raise forms.ValidationError("No puedes agregar movimientos después de una cancelación.")
 
 
 PropuestaRelacionCartaFianzaFormSet = inlineformset_factory(
@@ -147,6 +179,6 @@ PropuestaMovimientoPagoFormSet = inlineformset_factory(
     PropuestaMovimientoPago,
     form=PropuestaMovimientoPagoForm,
     formset=BasePropuestaMovimientoPagoFormSet,
-    extra=1,
+    extra=0,
     can_delete=True,
 )

@@ -17,9 +17,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function parseDecimal(value) {
         if (value === null || value === undefined) return 0;
-        const normalized = String(value).replace(",", ".").trim();
+
+        const raw = String(value).trim();
+        if (!raw) return 0;
+
+        let normalized = raw;
+
+        if (raw.includes(",") && raw.includes(".")) {
+            normalized = raw.replace(/\./g, "").replace(",", ".");
+        } else if (raw.includes(",")) {
+            normalized = raw.replace(",", ".");
+        }
+
         const parsed = parseFloat(normalized);
-        return isNaN(parsed) ? 0 : parsed;
+        return Number.isFinite(parsed) ? parsed : 0;
     }
 
     function formatMoney(value) {
@@ -37,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateCuentaOtroVisibility() {
-        const cuentaSelect = getFieldBySuffix("-comision_cuenta");
+        const cuentaSelect = document.getElementById("id_comision_cuenta");
         const wrapper = document.getElementById("comision-cuenta-otro-wrapper");
         if (!cuentaSelect || !wrapper) return;
 
@@ -102,7 +113,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateResumen() {
-        const montoTotalField = getFieldBySuffix("-monto_total");
+        const montoTotalField = document.getElementById("id_monto_total");
         const montoTotal = parseDecimal(montoTotalField ? montoTotalField.value : 0);
 
         let totalAdelantado = 0;
@@ -129,9 +140,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const saldoPendiente = Math.max(0, montoTotal - totalPagado);
 
         let estado = "Pendiente";
-        if (totalPagado === 0) {
+        if (totalPagado <= 0) {
             estado = "Pendiente";
-        } else if (saldoPendiente === 0 && totalCancelado > 0) {
+        } else if (montoTotal > 0 && totalPagado >= montoTotal) {
             estado = "Cancelada";
         } else {
             estado = "Con adelantos";
@@ -196,12 +207,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function bindResumenBaseEvents() {
-        const montoTotalField = getFieldBySuffix("-monto_total");
-        const cuentaSelect = getFieldBySuffix("-comision_cuenta");
+        const montoTotalField = document.getElementById("id_monto_total");
+        const cuentaSelect = document.getElementById("id_comision_cuenta");
+        const monedaField = document.getElementById("id_moneda");
 
         if (montoTotalField) {
             montoTotalField.addEventListener("input", updateResumen);
             montoTotalField.addEventListener("change", updateResumen);
+        }
+
+        if (monedaField) {
+            monedaField.addEventListener("change", updateResumen);
         }
 
         if (cuentaSelect) {
@@ -209,9 +225,124 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    function initEmpresaAutocomplete() {
+        const input = document.getElementById("empresa-search-input");
+        const hiddenEmpresaId = document.getElementById("empresa-id");
+        const resultsBox = document.getElementById("empresa-search-results");
+        const form = document.getElementById("propuestas-search-form");
+
+        if (!input || !hiddenEmpresaId || !resultsBox || !form) return;
+
+        const url = input.dataset.autocompleteUrl;
+        if (!url) return;
+
+        let debounceTimer = null;
+        let lastSelectedLabel = input.value.trim();
+
+        function closeResults() {
+            resultsBox.innerHTML = "";
+            resultsBox.classList.add("d-none");
+        }
+
+        function renderResults(items) {
+            if (!items.length) {
+                resultsBox.innerHTML = `
+                    <div class="propuestas-autocomplete-item">
+                        <span class="propuestas-autocomplete-title">Sin coincidencias</span>
+                    </div>
+                `;
+                resultsBox.classList.remove("d-none");
+                return;
+            }
+
+            resultsBox.innerHTML = items.map((item) => {
+                const meta = [
+                    item.ruc ? `RUC: ${item.ruc}` : "",
+                    item.es_consorcio ? "Consorcio" : "Empresa",
+                    item.representante_legal ? `Representante: ${item.representante_legal}` : ""
+                ].filter(Boolean).join(" · ");
+
+                return `
+                    <button type="button" class="propuestas-autocomplete-item" data-id="${item.id}" data-label="${item.nombre}">
+                        <span class="propuestas-autocomplete-title">${item.nombre}</span>
+                        <span class="propuestas-autocomplete-meta">${meta}</span>
+                    </button>
+                `;
+            }).join("");
+
+            resultsBox.classList.remove("d-none");
+
+            resultsBox.querySelectorAll(".propuestas-autocomplete-item[data-id]").forEach((button) => {
+                button.addEventListener("click", function () {
+                    hiddenEmpresaId.value = this.dataset.id;
+                    input.value = this.dataset.label;
+                    lastSelectedLabel = this.dataset.label;
+                    closeResults();
+                });
+            });
+        }
+
+        async function fetchResults(term) {
+            try {
+                const response = await fetch(`${url}?q=${encodeURIComponent(term)}`, {
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+
+                if (!response.ok) {
+                    closeResults();
+                    return;
+                }
+
+                const data = await response.json();
+                renderResults(data.results || []);
+            } catch (error) {
+                closeResults();
+            }
+        }
+
+        input.addEventListener("input", function () {
+            const term = this.value.trim();
+
+            if (term !== lastSelectedLabel) {
+                hiddenEmpresaId.value = "";
+            }
+
+            clearTimeout(debounceTimer);
+
+            if (term.length < 2) {
+                closeResults();
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetchResults(term);
+            }, 220);
+        });
+
+        input.addEventListener("focus", function () {
+            const term = this.value.trim();
+            if (term.length >= 2 && !hiddenEmpresaId.value) {
+                fetchResults(term);
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!resultsBox.contains(event.target) && event.target !== input) {
+                closeResults();
+            }
+        });
+
+        form.addEventListener("submit", function () {
+            if (hiddenEmpresaId.value) {
+                return;
+            }
+        });
+    }
+
     bindAddFormsetButtons();
     bindResumenBaseEvents();
     initMovimientos();
     updateCuentaOtroVisibility();
     updateResumen();
+    initEmpresaAutocomplete();
 });

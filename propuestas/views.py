@@ -108,6 +108,16 @@ def _build_create_forms(request, tipo_propuesta: str):
 
     propuesta_seed = Propuesta(tipo_propuesta=tipo_propuesta)
 
+    empresa_seed = (request.POST.get("empresa") or request.GET.get("empresa") or "").strip()
+    if empresa_seed.isdigit():
+        propuesta_seed.empresa_id = int(empresa_seed)
+
+    initial = {}
+    if request.method == "GET":
+        empresa_id = (request.GET.get("empresa") or "").strip()
+        if empresa_id.isdigit():
+            initial["empresa"] = int(empresa_id)
+
     if request.method == "POST":
         propuesta_form = propuesta_form_class(
             request.POST,
@@ -117,41 +127,19 @@ def _build_create_forms(request, tipo_propuesta: str):
 
         if propuesta_form.is_valid():
             propuesta_instance = propuesta_form.save(commit=False)
-
-            relacion_formset = relacion_formset_class(
-                request.POST,
-                instance=propuesta_instance,
-                prefix="rel",
-            )
-            movimientos_formset = PropuestaMovimientoPagoFormSet(
-                request.POST,
-                instance=propuesta_instance,
-                prefix="mov",
-            )
+            relacion_formset = relacion_formset_class(request.POST, instance=propuesta_instance, prefix="rel")
+            movimientos_formset = PropuestaMovimientoPagoFormSet(request.POST, instance=propuesta_instance, prefix="mov")
         else:
-            relacion_formset = relacion_formset_class(
-                request.POST,
-                instance=propuesta_seed,
-                prefix="rel",
-            )
-            movimientos_formset = PropuestaMovimientoPagoFormSet(
-                request.POST,
-                instance=propuesta_seed,
-                prefix="mov",
-            )
+            relacion_formset = relacion_formset_class(request.POST, instance=propuesta_seed, prefix="rel")
+            movimientos_formset = PropuestaMovimientoPagoFormSet(request.POST, instance=propuesta_seed, prefix="mov")
     else:
         propuesta_form = propuesta_form_class(
             instance=propuesta_seed,
             request_user=request.user,
+            initial=initial,
         )
-        relacion_formset = relacion_formset_class(
-            instance=propuesta_seed,
-            prefix="rel",
-        )
-        movimientos_formset = PropuestaMovimientoPagoFormSet(
-            instance=propuesta_seed,
-            prefix="mov",
-        )
+        relacion_formset = relacion_formset_class(instance=propuesta_seed, prefix="rel")
+        movimientos_formset = PropuestaMovimientoPagoFormSet(instance=propuesta_seed, prefix="mov")
 
     return propuesta_form, relacion_formset, movimientos_formset, template_title
 
@@ -231,6 +219,11 @@ def crear_propuesta_cf(request):
         "modo": "crear",
         "tipo_propuesta": Propuesta.TipoPropuesta.CARTA_FIANZA,
         "titulo": template_title,
+        "empresa_retorno_id": (
+            request.POST.get("empresa")
+            or request.GET.get("empresa")
+            or getattr(propuesta_form.instance, "empresa_id", "")
+        ),
     }
     return render(request, "propuestas/propuesta_form.html", context)
 
@@ -263,6 +256,11 @@ def crear_propuesta_fd(request):
         "modo": "crear",
         "tipo_propuesta": Propuesta.TipoPropuesta.FIDEICOMISO,
         "titulo": template_title,
+        "empresa_retorno_id": (
+            request.POST.get("empresa")
+            or request.GET.get("empresa")
+            or getattr(propuesta_form.instance, "empresa_id", "")
+        ),
     }
     return render(request, "propuestas/propuesta_form.html", context)
 
@@ -303,41 +301,53 @@ def editar_propuesta(request, pk):
             instance=propuesta,
             request_user=request.user,
         )
-        relacion_formset = relacion_formset_class(
-            request.POST,
-            instance=propuesta,
-            prefix="rel",
-        )
-        movimientos_formset = PropuestaMovimientoPagoFormSet(
-            request.POST,
-            instance=propuesta,
-            prefix="mov",
-        )
 
-        if (
-            propuesta_form.is_valid()
-            and relacion_formset.is_valid()
-            and movimientos_formset.is_valid()
-        ):
-            with transaction.atomic():
-                propuesta = propuesta_form.save(commit=True)
+        if propuesta_form.is_valid():
+            propuesta_instance = propuesta_form.save(commit=False)
 
-                relacion_formset.instance = propuesta
-                movimientos_formset.instance = propuesta
+            relacion_formset = relacion_formset_class(
+                request.POST,
+                instance=propuesta_instance,
+                prefix="rel",
+            )
+            movimientos_formset = PropuestaMovimientoPagoFormSet(
+                request.POST,
+                instance=propuesta_instance,
+                prefix="mov",
+            )
 
-                relacion_formset.save()
-                movimientos_formset.save()
+            if relacion_formset.is_valid() and movimientos_formset.is_valid():
+                with transaction.atomic():
+                    propuesta = propuesta_form.save(commit=True)
 
-                if propuesta.tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:
-                    reorder_relaciones_cartas(propuesta)
-                else:
-                    reorder_relaciones_fideicomisos(propuesta)
+                    relacion_formset.instance = propuesta
+                    movimientos_formset.instance = propuesta
 
-                reorder_movimientos(propuesta)
-                recalculate_propuesta_totals(propuesta, save=True)
+                    relacion_formset.save()
+                    movimientos_formset.save()
 
-            messages.success(request, "La propuesta fue actualizada correctamente.")
-            return redirect("propuestas:detalle", pk=propuesta.pk)
+                    if propuesta.tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:
+                        reorder_relaciones_cartas(propuesta)
+                    else:
+                        reorder_relaciones_fideicomisos(propuesta)
+
+                    reorder_movimientos(propuesta)
+                    recalculate_propuesta_totals(propuesta, save=True)
+
+                messages.success(request, "La propuesta fue actualizada correctamente.")
+                return redirect("propuestas:detalle", pk=propuesta.pk)
+        else:
+            relacion_formset = relacion_formset_class(
+                request.POST,
+                instance=propuesta,
+                prefix="rel",
+            )
+            movimientos_formset = PropuestaMovimientoPagoFormSet(
+                request.POST,
+                instance=propuesta,
+                prefix="mov",
+            )
+
     else:
         propuesta_form = propuesta_form_class(
             instance=propuesta,
@@ -361,6 +371,7 @@ def editar_propuesta(request, pk):
         "modo": "editar",
         "tipo_propuesta": propuesta.tipo_propuesta,
         "titulo": f"Editar {propuesta.codigo}",
+        "empresa_retorno_id": propuesta.empresa_id,
     }
     return render(request, "propuestas/propuesta_form.html", context)
 
@@ -395,7 +406,11 @@ def ajax_buscar_empresas(request):
 @propuestas_access_required
 def ajax_buscar_cartas_fianza(request):
     q = (request.GET.get("q") or request.GET.get("term") or "").strip()
-    resultados = buscar_cartas_fianza(q, limit=20)
+
+    empresa_id_raw = (request.GET.get("empresa") or "").strip()
+    empresa_id = int(empresa_id_raw) if empresa_id_raw.isdigit() else None
+
+    resultados = buscar_cartas_fianza(q, limit=20, empresa_id=empresa_id)
     return JsonResponse(
         {
             "results": [serialize_carta_fianza(item) for item in resultados],
@@ -422,27 +437,58 @@ def subir_documento_propuesta(request, pk):
         raise Http404()
 
     movimiento = None
-    movimiento_id = request.POST.get("movimiento_id")
+    movimiento_id = (request.POST.get("movimiento_id") or "").strip()
+    categoria = (request.POST.get("categoria") or "").strip()
+    descripcion = (request.POST.get("descripcion") or "").strip()
+
     if movimiento_id:
         movimiento = propuesta.movimientos.filter(pk=movimiento_id).first()
 
-    form = PropuestaDocumentoForm(
-        request.POST,
-        request.FILES,
-        propuesta=propuesta,
-        movimiento=movimiento,
-    )
+    if categoria != PropuestaDocumento.Categoria.PROPUESTA_GENERAL and movimiento is None:
+        messages.error(request, "No se encontró el movimiento asociado para este documento.")
+        return redirect("propuestas:detalle", pk=propuesta.pk)
 
-    if form.is_valid():
-        form.save(user=request.user)
-        messages.success(request, "Documento subido correctamente.")
+    archivos = request.FILES.getlist("archivo")
+
+    if not archivos:
+        messages.error(request, "Debes seleccionar al menos un PDF.")
+        return redirect("propuestas:detalle", pk=propuesta.pk)
+
+    errores = []
+
+    with transaction.atomic():
+        for archivo in archivos:
+            form = PropuestaDocumentoForm(
+                data={
+                    "categoria": categoria,
+                    "descripcion": descripcion,
+                },
+                files={
+                    "archivo": archivo,
+                },
+                propuesta=propuesta,
+                movimiento=movimiento,
+            )
+
+            if form.is_valid():
+                form.save(user=request.user)
+            else:
+                for field, field_errors in form.errors.items():
+                    for error in field_errors:
+                        errores.append(str(error))
+
+        if errores:
+            transaction.set_rollback(True)
+
+    if errores:
+        messages.error(request, errores[0])
     else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f"{field}: {error}")
+        if len(archivos) == 1:
+            messages.success(request, "Documento subido correctamente.")
+        else:
+            messages.success(request, f"Se subieron {len(archivos)} documentos correctamente.")
 
     return redirect("propuestas:detalle", pk=propuesta.pk)
-
 
 @propuestas_manage_required
 def eliminar_documento_propuesta(request, pk, doc_id):
