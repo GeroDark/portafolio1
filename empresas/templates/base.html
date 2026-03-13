@@ -168,7 +168,7 @@
 </nav>
 
 <!-- Contenido principal -->
-<div class="container {% block main_container_classes %}mt-5{% endblock %}">
+<div class="{% block main_container_wrapper %}container{% endblock %} {% block main_container_classes %}mt-5{% endblock %}">
     {% block content %}{% endblock %}
 </div>
 
