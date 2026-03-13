@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import calendar
+from datetime import date, datetime
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from .forms import (
     BuscarPropuestasForm,
@@ -23,6 +27,7 @@ from .selectors import (
     buscar_cartas_fianza,
     buscar_empresas_para_propuestas,
     buscar_fideicomisos,
+    calendario_propuestas_mes,
     propuestas_cf_por_empresa,
     propuestas_fd_por_empresa,
     propuestas_por_empresa,
@@ -53,11 +58,44 @@ def _get_propuesta_or_404(pk: int) -> Propuesta:
     )
 
 
-def _base_context():
+def _base_context(submodulo_activo: str | None = None):
     return {
         "modulo_activo": "propuestas",
+        "submodulo_activo": submodulo_activo,
     }
 
+
+MONTH_NAMES_ES = (
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+)
+
+
+def _parse_calendar_month(raw_value: str | None, fallback: date) -> date:
+    if not raw_value:
+        return fallback.replace(day=1)
+
+    try:
+        return datetime.strptime(raw_value, "%Y-%m").date().replace(day=1)
+    except ValueError:
+        return fallback.replace(day=1)
+
+
+def _shift_month(base_date: date, offset: int) -> date:
+    absolute_month = (base_date.year * 12 + base_date.month - 1) + offset
+    year = absolute_month // 12
+    month = absolute_month % 12 + 1
+    return date(year, month, 1)
 
 @propuestas_access_required
 def buscar_propuestas(request):
@@ -94,6 +132,52 @@ def buscar_propuestas(request):
         "empresa_id": empresa_id,
     }
     return render(request, "propuestas/buscar_propuestas.html", context)
+
+@propuestas_access_required
+def calendario_propuestas(request):
+    today = timezone.localdate()
+    base_date = _parse_calendar_month(request.GET.get("m"), today)
+
+    payload = calendario_propuestas_mes(base_date)
+
+    cal = calendar.Calendar(firstweekday=0)  # lunes
+    semanas = []
+
+    for semana in cal.monthdatescalendar(base_date.year, base_date.month):
+        fila = []
+        for day in semana:
+            eventos = payload["eventos_por_fecha"].get(day, [])
+            fila.append(
+                {
+                    "fecha": day,
+                    "numero": day.day,
+                    "pertenece_mes": day.month == base_date.month,
+                    "es_hoy": day == today,
+                    "eventos_visibles": eventos[:3],
+                    "eventos_extra": max(len(eventos) - 3, 0),
+                    "eventos_extra_lista": eventos[3:],
+                }
+            )
+        semanas.append(fila)
+
+    prev_month = _shift_month(base_date, -1)
+    next_month = _shift_month(base_date, 1)
+
+    context = {
+        **_base_context(submodulo_activo="calendario"),
+        "dias_semana": ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+        "semanas": semanas,
+        "mes_actual": base_date.strftime("%Y-%m"),
+        "mes_anterior": prev_month.strftime("%Y-%m"),
+        "mes_siguiente": next_month.strftime("%Y-%m"),
+        "mes_titulo": f"{MONTH_NAMES_ES[base_date.month - 1]} {base_date.year}",
+        "ingresos_mes": payload["ingresos_mes"],
+        "deuda_mes": payload["deuda_mes"],
+        "cantidad_propuestas": payload["cantidad_propuestas"],
+        "cantidad_pagos": payload["cantidad_pagos"],
+        "cantidad_vencimientos": payload["cantidad_vencimientos"],
+    }
+    return render(request, "propuestas/calendario_propuestas.html", context)
 
 
 def _build_create_forms(request, tipo_propuesta: str):

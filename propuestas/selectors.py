@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from datetime import date, timedelta
+from decimal import Decimal
+
 from django.db.models import Q
 
 from empresas.models import CartaFianza, Empresa, Fideicomiso
 
-from .models import Propuesta
+from .models import Propuesta, PropuestaMovimientoPago
 
 
 def _existing_model_fields(model) -> set[str]:
@@ -168,6 +172,147 @@ def metricas_mensuales_propuestas():
         "propuestas_con_saldo": 0,
     }
 
+
+def _month_bounds(base_date: date):
+    month_start = base_date.replace(day=1)
+
+    if month_start.month == 12:
+        next_month = month_start.replace(year=month_start.year + 1, month=1, day=1)
+    else:
+        next_month = month_start.replace(month=month_start.month + 1, day=1)
+
+    month_end = next_month - timedelta(days=1)
+    return month_start, month_end
+
+
+def _empresa_nombre_propuesta(propuesta: Propuesta) -> str:
+    empresa = getattr(propuesta, "empresa", None)
+    return (
+        propuesta.empresa_nombre_snapshot
+        or getattr(empresa, "nombre_consorcio", "")
+        or getattr(empresa, "nombre", "")
+        or ""
+    )
+
+
+def _base_evento_propuesta(
+    propuesta: Propuesta,
+    *,
+    tipo_evento: str,
+    tipo_label: str,
+    monto_evento=None,
+):
+    return {
+        "tipo_evento": tipo_evento,  # propuesta | pago | vencimiento
+        "tipo_label": tipo_label,
+        "propuesta_id": propuesta.id,
+        "codigo": propuesta.codigo,
+        "empresa_nombre": _empresa_nombre_propuesta(propuesta),
+        "moneda": propuesta.moneda,
+        "monto_total": propuesta.monto_total,
+        "estado_pago": propuesta.estado_pago_actual,
+        "estado_pago_label": propuesta.get_estado_pago_actual_display(),
+        "monto_evento": monto_evento,
+    }
+
+
+def calendario_propuestas_mes(base_date: date):
+    month_start, month_end = _month_bounds(base_date)
+
+    propuestas = list(
+        Propuesta.objects.activos()
+        .select_related("empresa")
+        .filter(fecha_propuesta__range=(month_start, month_end))
+        .order_by("fecha_propuesta", "-created_at", "-id")
+    )
+
+    pagos = list(
+        PropuestaMovimientoPago.objects.select_related("propuesta", "propuesta__empresa")
+        .filter(
+            propuesta__is_deleted=False,
+            fecha__range=(month_start, month_end),
+        )
+        .order_by("fecha", "orden", "id")
+    )
+
+    vencimientos = list(
+        PropuestaMovimientoPago.objects.select_related("propuesta", "propuesta__empresa")
+        .filter(
+            propuesta__is_deleted=False,
+            tipo_comprobante=PropuestaMovimientoPago.TipoComprobante.FACTURA,
+            factura_modalidad=PropuestaMovimientoPago.FacturaModalidad.CREDITO,
+            factura_credito_cancelado=False,
+            factura_fecha_vencimiento__range=(month_start, month_end),
+        )
+        .order_by("factura_fecha_vencimiento", "fecha", "orden", "id")
+    )
+
+    eventos_por_fecha = defaultdict(list)
+
+    for propuesta in propuestas:
+        eventos_por_fecha[propuesta.fecha_propuesta].append(
+            {
+                **_base_evento_propuesta(
+                    propuesta,
+                    tipo_evento="propuesta",
+                    tipo_label="Propuesta registrada",
+                ),
+                "_sort": 0,
+            }
+        )
+
+    for movimiento in pagos:
+        propuesta = movimiento.propuesta
+        eventos_por_fecha[movimiento.fecha].append(
+            {
+                **_base_evento_propuesta(
+                    propuesta,
+                    tipo_evento="pago",
+                    tipo_label="Pago realizado",
+                    monto_evento=movimiento.monto,
+                ),
+                "_sort": 1,
+            }
+        )
+
+    for movimiento in vencimientos:
+        propuesta = movimiento.propuesta
+        eventos_por_fecha[movimiento.factura_fecha_vencimiento].append(
+            {
+                **_base_evento_propuesta(
+                    propuesta,
+                    tipo_evento="vencimiento",
+                    tipo_label="Vence crédito",
+                    monto_evento=movimiento.monto,
+                ),
+                "_sort": 2,
+            }
+        )
+
+    for fecha, eventos in eventos_por_fecha.items():
+        eventos.sort(
+            key=lambda item: (
+                item["_sort"],
+                item["empresa_nombre"].lower(),
+                item["propuesta_id"],
+            )
+        )
+        for evento in eventos:
+            evento.pop("_sort", None)
+
+    ingresos_mes = sum((mov.monto or Decimal("0.00") for mov in pagos), Decimal("0.00"))
+    deuda_mes = sum((mov.monto or Decimal("0.00") for mov in vencimientos), Decimal("0.00"))
+
+    return {
+        "month_start": month_start,
+        "month_end": month_end,
+        "eventos_por_fecha": eventos_por_fecha,
+        "ingresos_mes": ingresos_mes,
+        "deuda_mes": deuda_mes,
+        "cantidad_propuestas": len(propuestas),
+        "cantidad_pagos": len(pagos),
+        "cantidad_vencimientos": len(vencimientos),
+    }
 
 def serialize_empresa(empresa: Empresa) -> dict:
     nombre = getattr(empresa, "nombre_consorcio", "") or getattr(empresa, "nombre", "") or ""

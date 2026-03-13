@@ -400,3 +400,269 @@
 .propuesta-form-page .js-fideicomiso-suggestions {
     z-index: 5000 !important;
 }
+
+/* =========================
+   Calendario de propuestas
+   ========================= */
+
+.propuestas-calendar-layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.propuestas-calendar-sidebar {
+    position: sticky;
+    top: calc(var(--navbar-h, 0px) + 1rem);
+}
+
+.propuestas-calendar-panel,
+.propuestas-calendar-board {
+    background: #ffffff;
+    border: 1px solid #dfe4ea;
+    border-radius: 18px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+.propuestas-calendar-panel {
+    padding: 1rem;
+}
+
+.propuestas-calendar-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+}
+
+.propuestas-calendar-subtitle {
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.propuestas-calendar-metric {
+    background: linear-gradient(135deg, #fff7f2, #ffffff);
+    border: 1px solid #f0dfd3;
+    border-radius: 16px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.propuestas-calendar-metric:last-child {
+    margin-bottom: 0;
+}
+
+.propuestas-calendar-metric-label {
+    display: block;
+    font-size: 0.88rem;
+    color: #6c757d;
+    margin-bottom: 0.2rem;
+}
+
+.propuestas-calendar-metric-value {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #212529;
+    line-height: 1.2;
+}
+
+.propuestas-calendar-mini-stats {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eceff3;
+}
+
+.propuestas-calendar-mini-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    font-size: 0.95rem;
+}
+
+.propuestas-calendar-board {
+    padding: 1rem;
+}
+
+.propuestas-calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.propuestas-calendar-nav-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.propuestas-calendar-grid-wrap {
+    overflow-x: auto;
+}
+
+.propuestas-calendar-grid {
+    min-width: 980px;
+}
+
+.propuestas-calendar-weekdays,
+.propuestas-calendar-week {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.propuestas-calendar-weekdays {
+    margin-bottom: 0.75rem;
+}
+
+.propuestas-calendar-weekday {
+    text-align: center;
+    font-weight: 700;
+    color: #495057;
+    padding: 0.65rem 0.5rem;
+    background: #f8f9fb;
+    border: 1px solid #e7ebef;
+    border-radius: 12px;
+}
+
+.propuestas-calendar-week + .propuestas-calendar-week {
+    margin-top: 0.75rem;
+}
+
+.propuestas-calendar-day {
+    min-height: 235px;
+    background: #ffffff;
+    border: 1px solid #dfe4ea;
+    border-radius: 16px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.propuestas-calendar-day.is-outside {
+    background: #f7f8fa;
+    opacity: 0.82;
+}
+
+.propuestas-calendar-day.is-today {
+    border-color: #f26522;
+    box-shadow: 0 0 0 2px rgba(242, 101, 34, 0.15);
+}
+
+.propuestas-calendar-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.propuestas-calendar-day-number {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #212529;
+}
+
+.propuestas-calendar-events {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.propuestas-calendar-event {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 14px;
+    padding: 0.65rem 0.7rem;
+    border: 1px solid #e5e9ee;
+    background: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.propuestas-calendar-event:hover,
+.propuestas-calendar-event:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    color: inherit;
+}
+
+.propuestas-calendar-event--propuesta {
+    border-left: 5px solid #f26522;
+}
+
+.propuestas-calendar-event--pago {
+    border-left: 5px solid #0d6efd;
+}
+
+.propuestas-calendar-event--vencimiento {
+    border-left: 5px solid #dc3545;
+}
+
+.propuestas-calendar-event-type {
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.2rem;
+    color: #6c757d;
+}
+
+.propuestas-calendar-event-code {
+    font-size: 0.78rem;
+    color: #6c757d;
+    margin-bottom: 0.15rem;
+}
+
+.propuestas-calendar-event-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 0.45rem;
+    color: #212529;
+}
+
+.propuestas-calendar-event-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.84rem;
+}
+
+.propuestas-calendar-more-btn {
+    margin-top: 0.1rem;
+    border: 0;
+    background: #f1f3f5;
+    color: #495057;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    width: fit-content;
+}
+
+.propuestas-calendar-more-btn:hover,
+.propuestas-calendar-more-btn:focus {
+    background: #e9ecef;
+}
+
+.propuestas-calendar-empty {
+    color: #adb5bd;
+    font-size: 0.82rem;
+    font-style: italic;
+}
+
+@media (max-width: 991.98px) {
+    .propuestas-calendar-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .propuestas-calendar-sidebar {
+        position: static;
+        top: auto;
+    }
+}

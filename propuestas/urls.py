@@ -8,6 +8,7 @@ urlpatterns = [
     path("buscar/", views.buscar_propuestas, name="buscar"),
     path("nueva/carta-fianza/", views.crear_propuesta_cf, name="crear_cf"),
     path("nueva/fideicomiso/", views.crear_propuesta_fd, name="crear_fd"),
+    path("calendario/", views.calendario_propuestas, name="calendario"),
     path("<int:pk>/", views.detalle_propuesta, name="detalle"),
     path("<int:pk>/editar/", views.editar_propuesta, name="editar"),
     path("<int:pk>/eliminar/", views.eliminar_propuesta, name="eliminar"),
