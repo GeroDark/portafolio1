@@ -1,60 +1,73 @@
-{{ form.orden }}
+{{ form.id }}
 
-<div class="row g-3 align-items-end">
-    <div class="col-md-8">
-        <label class="form-label" for="{{ form.fideicomiso.id_for_label }}">{{ form.fideicomiso.label }}</label>
-        {{ form.fideicomiso }}
-        {% if form.fideicomiso.errors %}
-            <div class="text-danger small mt-1">{{ form.fideicomiso.errors }}</div>
-        {% endif %}
-        <div class="form-text">
-            Busca por fiduciaria, ejecutora o representante.
-        </div>
-    </div>
-
-    <div class="col-md-2">
-        {% if form.instance.pk %}
-            <label class="form-label">Orden</label>
-            <input type="text" class="form-control" value="{{ form.instance.orden }}" readonly>
-        {% else %}
-            <label class="form-label">Orden</label>
-            <input type="text" class="form-control" value="Nuevo" readonly>
-        {% endif %}
-    </div>
-
-    <div class="col-md-2">
-        {% if form.DELETE %}
-            <div class="form-check mt-4">
-                {{ form.DELETE }}
-                <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">
-                    Eliminar
-                </label>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-{% if form.instance.pk %}
-    <div class="row g-2 mt-2 small text-muted">
-        <div class="col-md-3">
-            <strong>Fiduciaria:</strong><br>
-            {{ form.instance.snapshot_fiduciaria|default:"-" }}
-        </div>
-        <div class="col-md-3">
-            <strong>Ejecutora:</strong><br>
-            {{ form.instance.snapshot_ejecutora|default:"-" }}
-        </div>
-        <div class="col-md-2">
-            <strong>Representante:</strong><br>
-            {{ form.instance.snapshot_representante|default:"-" }}
-        </div>
-        <div class="col-md-2">
-            <strong>Residente:</strong><br>
-            {{ form.instance.snapshot_residente|default:"-" }}
-        </div>
-        <div class="col-md-2">
-            <strong>Estado:</strong><br>
-            {{ form.instance.snapshot_estado|default:"-" }}
-        </div>
-    </div>
+{% if form.orden %}
+  <div class="d-none">
+    {{ form.orden }}
+  </div>
 {% endif %}
+
+{% if form.DELETE %}
+  <div class="d-none">
+    {{ form.DELETE }}
+  </div>
+{% endif %}
+
+<div class="js-relacion-fd-item position-relative">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-10 position-relative">
+      <label class="form-label" for="{{ form.fideicomiso.id_for_label }}">
+        {{ form.fideicomiso.label }}
+      </label>
+
+      <div class="d-none">
+        {{ form.fideicomiso }}
+      </div>
+
+      <input
+        type="text"
+        class="form-control js-fideicomiso-search"
+        placeholder="Busca por fiduciaria, ejecutora o representante"
+        autocomplete="off"
+        data-autocomplete-url="/propuestas/ajax/fideicomisos/"
+        value="{% if form.instance.pk %}{{ form.instance.snapshot_fiduciaria }} - {{ form.instance.snapshot_ejecutora }} - {{ form.instance.snapshot_representante }}{% endif %}"
+      >
+
+      <ul class="list-group js-fideicomiso-suggestions position-absolute w-100 shadow-sm" style="z-index: 20;"></ul>
+
+      {% if form.fideicomiso.errors %}
+        <div class="text-danger small mt-1">{{ form.fideicomiso.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="col-md-2 d-grid">
+      <button type="button" class="btn btn-outline-danger js-remove-relacion">
+        Eliminar
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-3 border rounded bg-light p-3 js-fideicomiso-preview {% if not form.instance.pk %}d-none{% endif %}">
+    <div class="row g-2 small">
+      <div class="col-md-3">
+        <strong>Fiduciaria</strong>
+        <div class="js-preview-fiduciaria">{{ form.instance.snapshot_fiduciaria|default:"-" }}</div>
+      </div>
+      <div class="col-md-3">
+        <strong>Ejecutora</strong>
+        <div class="js-preview-ejecutora">{{ form.instance.snapshot_ejecutora|default:"-" }}</div>
+      </div>
+      <div class="col-md-2">
+        <strong>Representante</strong>
+        <div class="js-preview-representante">{{ form.instance.snapshot_representante|default:"-" }}</div>
+      </div>
+      <div class="col-md-2">
+        <strong>Residente</strong>
+        <div class="js-preview-residente">{{ form.instance.snapshot_residente|default:"-" }}</div>
+      </div>
+      <div class="col-md-2">
+        <strong>Estado</strong>
+        <div class="js-preview-estado">{{ form.instance.snapshot_estado|default:"-" }}</div>
+      </div>
+    </div>
+  </div>
+</div>

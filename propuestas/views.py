@@ -505,7 +505,11 @@ def ajax_buscar_cartas_fianza(request):
 @propuestas_access_required
 def ajax_buscar_fideicomisos(request):
     q = (request.GET.get("q") or request.GET.get("term") or "").strip()
-    resultados = buscar_fideicomisos(q, limit=20)
+
+    empresa_id_raw = (request.GET.get("empresa") or "").strip()
+    empresa_id = int(empresa_id_raw) if empresa_id_raw.isdigit() else None
+
+    resultados = buscar_fideicomisos(q, limit=20, empresa_id=empresa_id)
     return JsonResponse(
         {
             "results": [serialize_fideicomiso(item) for item in resultados],

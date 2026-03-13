@@ -7,24 +7,23 @@
 
 <div class="js-relacion-cf-item position-relative">
   <div class="row g-3 align-items-end">
-    <div class="col-md-10">
+    <div class="col-md-10 position-relative">
       <label class="form-label">{{ form.carta_fianza.label }}</label>
 
       <div class="d-none">
         {{ form.carta_fianza }}
       </div>
 
-      <div>
-        <input
-            type="text"
-            class="form-control js-carta-search"
-            placeholder="Busca por número de carta, aseguradora o entidad"
-            autocomplete="off"
-            data-autocomplete-url="/propuestas/ajax/cartas-fianza/"
-            value="{% if form.instance.pk %}{{ form.instance.snapshot_numero_carta }} - {{ form.instance.snapshot_aseguradora }} - {{ form.instance.snapshot_entidad_beneficiaria }}{% endif %}"
-        >
-        <ul class="list-group js-carta-suggestions"></ul>
-        </div>
+      <input
+        type="text"
+        class="form-control js-carta-search"
+        placeholder="Busca por número de carta, aseguradora o entidad"
+        autocomplete="off"
+        data-autocomplete-url="/propuestas/ajax/cartas-fianza/"
+        value="{% if form.instance.pk %}{{ form.instance.snapshot_numero_carta }} - {{ form.instance.snapshot_aseguradora }} - {{ form.instance.snapshot_entidad_beneficiaria }}{% endif %}"
+      >
+
+      <ul class="list-group js-carta-suggestions position-absolute w-100 shadow-sm" style="z-index: 20;"></ul>
 
       {% if form.carta_fianza.errors %}
         <div class="text-danger small mt-1">{{ form.carta_fianza.errors }}</div>

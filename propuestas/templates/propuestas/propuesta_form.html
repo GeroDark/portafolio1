@@ -412,9 +412,41 @@ document.addEventListener("DOMContentLoaded", () => {
     preview.querySelector(".js-preview-entidad").textContent = "-";
   }
 
+  function renderFideicomisoPreview(item, fideicomiso) {
+    const preview = item.querySelector(".js-fideicomiso-preview");
+    if (!preview) return;
+
+    preview.classList.remove("d-none");
+    preview.querySelector(".js-preview-fiduciaria").textContent = fideicomiso.fiduciaria || "-";
+    preview.querySelector(".js-preview-ejecutora").textContent = fideicomiso.ejecutora || "-";
+    preview.querySelector(".js-preview-representante").textContent = fideicomiso.representante || "-";
+    preview.querySelector(".js-preview-residente").textContent = fideicomiso.residente || "-";
+    preview.querySelector(".js-preview-estado").textContent = fideicomiso.estado || "-";
+  }
+
+  function clearFideicomisoPreview(item) {
+    const preview = item.querySelector(".js-fideicomiso-preview");
+    if (!preview) return;
+    preview.classList.add("d-none");
+    preview.querySelector(".js-preview-fiduciaria").textContent = "-";
+    preview.querySelector(".js-preview-ejecutora").textContent = "-";
+    preview.querySelector(".js-preview-representante").textContent = "-";
+    preview.querySelector(".js-preview-residente").textContent = "-";
+    preview.querySelector(".js-preview-estado").textContent = "-";
+  }
+
   async function fetchCartas(term) {
     if (!empresaField || !empresaField.value) return [];
     const url = `/propuestas/ajax/cartas-fianza/?term=${encodeURIComponent(term)}&empresa=${encodeURIComponent(empresaField.value)}`;
+    const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.results || [];
+  }
+
+  async function fetchFideicomisos(term) {
+    if (!empresaField || !empresaField.value) return [];
+    const url = `/propuestas/ajax/fideicomisos/?term=${encodeURIComponent(term)}&empresa=${encodeURIComponent(empresaField.value)}`;
     const response = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
     if (!response.ok) return [];
     const data = await response.json();
@@ -438,67 +470,71 @@ document.addEventListener("DOMContentLoaded", () => {
       suggestions.innerHTML = "";
     }
 
-    function setSelectedCarta(carta) {
-        const optionLabel = `${carta.numero_fianza || ""} - ${carta.aseguradora || ""} - ${carta.entidad || ""}`
-            .replace(/^ - | - $/g, "")
-            .trim();
+    function renderSuggestions(cartas) {
+      suggestions.innerHTML = "";
 
-        let option = Array.from(hiddenSelect.options).find(
-            (opt) => opt.value === String(carta.id)
-        );
-
-        if (!option) {
-            option = new Option(optionLabel, String(carta.id), true, true);
-            hiddenSelect.add(option);
-        } else {
-            option.selected = true;
-            hiddenSelect.value = String(carta.id);
-        }
-
-        Array.from(hiddenSelect.options).forEach((opt) => {
-            opt.selected = opt.value === String(carta.id);
-        });
-
-        hiddenSelect.value = String(carta.id);
-        hiddenSelect.dispatchEvent(new Event("change", { bubbles: true }));
-
-        searchInput.value = optionLabel;
-        renderCartaPreview(item, carta);
-        closeSuggestions();
+      cartas.forEach((carta) => {
+        const li = document.createElement("li");
+        li.className = "list-group-item list-group-item-action";
+        li.style.cursor = "pointer";
+        li.innerHTML = `
+          <div class="fw-semibold">${carta.numero_fianza || "-"}</div>
+          <div class="small text-muted">${carta.aseguradora || "-"} · ${carta.entidad || "-"}</div>
+        `;
+        li.addEventListener("click", () => setSelectedCarta(carta));
+        suggestions.appendChild(li);
+      });
     }
 
+    function setSelectedCarta(carta) {
+      const optionLabel = `${carta.numero_fianza || ""} - ${carta.aseguradora || ""} - ${carta.entidad || ""}`
+        .replace(/^ - | - $/g, "")
+        .trim();
+
+      let option = Array.from(hiddenSelect.options).find(
+        (opt) => opt.value === String(carta.id)
+      );
+
+      if (!option) {
+        option = new Option(optionLabel, String(carta.id), true, true);
+        hiddenSelect.add(option);
+      } else {
+        option.selected = true;
+        hiddenSelect.value = String(carta.id);
+      }
+
+      Array.from(hiddenSelect.options).forEach((opt) => {
+        opt.selected = opt.value === String(carta.id);
+      });
+
+      hiddenSelect.value = String(carta.id);
+      hiddenSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+      searchInput.value = optionLabel;
+      renderCartaPreview(item, carta);
+      closeSuggestions();
+    }
+
+    searchInput.addEventListener("focus", async () => {
+      const cartas = await fetchCartas(searchInput.value.trim());
+      renderSuggestions(cartas);
+    });
+
     searchInput.addEventListener("input", () => {
-        const term = searchInput.value.trim();
+      const term = searchInput.value.trim();
 
-        hiddenSelect.value = "";
-        Array.from(hiddenSelect.options).forEach((opt) => {
-            opt.selected = false;
-        });
+      hiddenSelect.value = "";
+      Array.from(hiddenSelect.options).forEach((opt) => {
+        opt.selected = false;
+      });
 
-        clearCartaPreview(item);
+      clearCartaPreview(item);
 
       clearTimeout(debounceTimer);
 
-      if (term.length < 2) {
-        closeSuggestions();
-        return;
-      }
-
       debounceTimer = setTimeout(async () => {
         const cartas = await fetchCartas(term);
-        suggestions.innerHTML = "";
-
-        cartas.forEach((carta) => {
-          const li = document.createElement("li");
-          li.className = "list-group-item list-group-item-action";
-          li.style.cursor = "pointer";
-          li.innerHTML = `
-            <div class="fw-semibold">${carta.numero_fianza || "-"}</div>
-            <div class="small text-muted">${carta.aseguradora || "-"} · ${carta.entidad || "-"}</div>
-          `;
-          li.addEventListener("click", () => setSelectedCarta(carta));
-          suggestions.appendChild(li);
-        });
+        renderSuggestions(cartas);
       }, 220);
     });
 
@@ -521,6 +557,116 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     item.dataset.boundCf = "1";
+  }
+
+  function bindRelacionFdItem(item) {
+    if (!item || item.dataset.boundFd === "1") return;
+
+    const searchInput = item.querySelector(".js-fideicomiso-search");
+    const suggestions = item.querySelector(".js-fideicomiso-suggestions");
+    const hiddenSelect = bySuffix(item, "-fideicomiso");
+    const deleteField = bySuffix(item, "-DELETE");
+    const removeBtn = item.querySelector(".js-remove-relacion");
+
+    if (!searchInput || !suggestions || !hiddenSelect) return;
+
+    let debounceTimer = null;
+
+    function closeSuggestions() {
+      suggestions.innerHTML = "";
+    }
+
+    function renderSuggestions(items) {
+      suggestions.innerHTML = "";
+
+      items.forEach((fideicomiso) => {
+        const li = document.createElement("li");
+        li.className = "list-group-item list-group-item-action";
+        li.style.cursor = "pointer";
+        li.innerHTML = `
+          <div class="fw-semibold">${fideicomiso.fiduciaria || "-"}</div>
+          <div class="small text-muted">${fideicomiso.ejecutora || "-"} · ${fideicomiso.representante || "-"}</div>
+        `;
+        li.addEventListener("click", () => setSelectedFideicomiso(fideicomiso));
+        suggestions.appendChild(li);
+      });
+    }
+
+    function setSelectedFideicomiso(fideicomiso) {
+      const optionLabel = [
+        fideicomiso.fiduciaria || "",
+        fideicomiso.ejecutora || "",
+        fideicomiso.representante || ""
+      ]
+        .filter(Boolean)
+        .join(" - ");
+
+      let option = Array.from(hiddenSelect.options).find(
+        (opt) => opt.value === String(fideicomiso.id)
+      );
+
+      if (!option) {
+        option = new Option(optionLabel, String(fideicomiso.id), true, true);
+        hiddenSelect.add(option);
+      } else {
+        option.selected = true;
+        hiddenSelect.value = String(fideicomiso.id);
+      }
+
+      Array.from(hiddenSelect.options).forEach((opt) => {
+        opt.selected = opt.value === String(fideicomiso.id);
+      });
+
+      hiddenSelect.value = String(fideicomiso.id);
+      hiddenSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+      searchInput.value = optionLabel;
+      renderFideicomisoPreview(item, fideicomiso);
+      closeSuggestions();
+    }
+
+    searchInput.addEventListener("focus", async () => {
+      const items = await fetchFideicomisos(searchInput.value.trim());
+      renderSuggestions(items);
+    });
+
+    searchInput.addEventListener("input", () => {
+      const term = searchInput.value.trim();
+
+      hiddenSelect.value = "";
+      Array.from(hiddenSelect.options).forEach((opt) => {
+        opt.selected = false;
+      });
+
+      clearFideicomisoPreview(item);
+
+      clearTimeout(debounceTimer);
+
+      debounceTimer = setTimeout(async () => {
+        const items = await fetchFideicomisos(term);
+        renderSuggestions(items);
+      }, 220);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!suggestions.contains(e.target) && e.target !== searchInput) {
+        closeSuggestions();
+      }
+    });
+
+    if (removeBtn) {
+      removeBtn.addEventListener("click", () => {
+        if (deleteField) {
+          deleteField.checked = true;
+        }
+        const wrapper = item.closest(".formset-item");
+        if (wrapper) {
+          wrapper.classList.add("d-none");
+        }
+      });
+    }
+
+    item.dataset.boundFd = "1";
   }
 
   function bindMovimientoItem(item) {
@@ -553,6 +699,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function initCustomBindings() {
     document.querySelectorAll(".js-relacion-cf-item").forEach(bindRelacionCfItem);
+    document.querySelectorAll(".js-relacion-fd-item").forEach(bindRelacionFdItem);
     document.querySelectorAll(".movimiento-item").forEach(bindMovimientoItem);
     toggleConsorcioExtras();
     toggleCuentaOtro();

@@ -16,7 +16,7 @@ from .models import (
     PropuestaRelacionFideicomiso,
 )
 from .services import snapshot_empresa
-from .selectors import cartas_fianza_para_empresa
+from .selectors import cartas_fianza_para_empresa, fideicomisos_para_empresa
 
 
 INPUT_CLASS = "form-control"
@@ -274,7 +274,7 @@ class PropuestaRelacionCartaFianzaForm(BaseStyledFormMixin, forms.ModelForm):
             if carta.id not in ids_validos:
                 self.add_error(
                     "carta_fianza",
-                    "Solo puedes agregar cartas fianza de la empresa seleccionada o compartidas por su consorcio."
+                    "Solo puedes agregar cartas fianza vinculadas a la empresa seleccionada."
                 )
 
         if self.propuesta and self.propuesta.pk and carta:
@@ -323,11 +323,7 @@ class PropuestaRelacionFideicomisoForm(BaseStyledFormMixin, forms.ModelForm):
         elif getattr(self.instance, "propuesta_id", None):
             empresa_id = self.instance.propuesta.empresa_id
 
-        qs = Fideicomiso.objects.select_related("empresa").all()
-        if empresa_id:
-            qs = qs.filter(empresa_id=empresa_id)
-        else:
-            qs = qs.none()
+        qs = fideicomisos_para_empresa(empresa_id)
 
         self.fields["fideicomiso"].queryset = qs.order_by("-id")
         self.fields["fideicomiso"].widget.attrs.update(
@@ -346,8 +342,14 @@ class PropuestaRelacionFideicomisoForm(BaseStyledFormMixin, forms.ModelForm):
             raise ValidationError("Solo una propuesta de Fideicomiso puede tener fideicomisos relacionados.")
 
         if self.propuesta and fideicomiso and getattr(self.propuesta, "empresa_id", None):
-            if fideicomiso.empresa_id != self.propuesta.empresa_id:
-                self.add_error("fideicomiso", "Solo puedes agregar fideicomisos de la empresa seleccionada.")
+            ids_validos = set(
+                fideicomisos_para_empresa(self.propuesta.empresa_id).values_list("id", flat=True)
+            )
+            if fideicomiso.id not in ids_validos:
+                self.add_error(
+                    "fideicomiso",
+                    "Solo puedes agregar fideicomisos vinculados a la empresa seleccionada.",
+                )
 
         if self.propuesta and self.propuesta.pk and fideicomiso:
             qs = PropuestaRelacionFideicomiso.objects.filter(
