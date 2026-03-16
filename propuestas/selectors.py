@@ -296,12 +296,40 @@ def calendario_propuestas_mes(base_date: date):
     ingresos_mes = sum((mov.monto or Decimal("0.00") for mov in pagos), Decimal("0.00"))
     deuda_mes = sum((mov.monto or Decimal("0.00") for mov in vencimientos), Decimal("0.00"))
 
+    pagos_cf = [
+        mov for mov in pagos
+        if mov.propuesta.tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA
+    ]
+    pagos_fd = [
+        mov for mov in pagos
+        if mov.propuesta.tipo_propuesta == Propuesta.TipoPropuesta.FIDEICOMISO
+    ]
+
+    vencimientos_cf = [
+        mov for mov in vencimientos
+        if mov.propuesta.tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA
+    ]
+    vencimientos_fd = [
+        mov for mov in vencimientos
+        if mov.propuesta.tipo_propuesta == Propuesta.TipoPropuesta.FIDEICOMISO
+    ]
+
+    ingresos_cf_mes = sum((mov.monto or Decimal("0.00") for mov in pagos_cf), Decimal("0.00"))
+    ingresos_fd_mes = sum((mov.monto or Decimal("0.00") for mov in pagos_fd), Decimal("0.00"))
+
+    deuda_cf_mes = sum((mov.monto or Decimal("0.00") for mov in vencimientos_cf), Decimal("0.00"))
+    deuda_fd_mes = sum((mov.monto or Decimal("0.00") for mov in vencimientos_fd), Decimal("0.00"))
+
     return {
         "month_start": month_start,
         "month_end": month_end,
         "eventos_por_fecha": eventos_por_fecha,
         "ingresos_mes": ingresos_mes,
         "deuda_mes": deuda_mes,
+        "ingresos_cf_mes": ingresos_cf_mes,
+        "deuda_cf_mes": deuda_cf_mes,
+        "ingresos_fd_mes": ingresos_fd_mes,
+        "deuda_fd_mes": deuda_fd_mes,
         "cantidad_propuestas": len(propuestas),
         "cantidad_pagos": len(pagos),
         "cantidad_vencimientos": len(vencimientos),

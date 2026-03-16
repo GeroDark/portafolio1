@@ -28,16 +28,30 @@
             </div>
 
             <div class="propuestas-calendar-metric">
-                <span class="propuestas-calendar-metric-label">Ingresos del mes</span>
+                <span class="propuestas-calendar-metric-label">Ingresos Carta Fianza</span>
                 <span class="propuestas-calendar-metric-value">
-                    S/ {{ ingresos_mes|floatformat:2|intcomma }}
+                    S/ {{ ingresos_cf_mes|floatformat:2|intcomma }}
                 </span>
             </div>
 
             <div class="propuestas-calendar-metric">
-                <span class="propuestas-calendar-metric-label">Lo que le deben en el mes</span>
+                <span class="propuestas-calendar-metric-label">Deuda Carta Fianza</span>
                 <span class="propuestas-calendar-metric-value">
-                    S/ {{ deuda_mes|floatformat:2|intcomma }}
+                    S/ {{ deuda_cf_mes|floatformat:2|intcomma }}
+                </span>
+            </div>
+
+            <div class="propuestas-calendar-metric">
+                <span class="propuestas-calendar-metric-label">Ingresos Fideicomiso</span>
+                <span class="propuestas-calendar-metric-value">
+                    S/ {{ ingresos_fd_mes|floatformat:2|intcomma }}
+                </span>
+            </div>
+
+            <div class="propuestas-calendar-metric">
+                <span class="propuestas-calendar-metric-label">Deuda Fideicomiso</span>
+                <span class="propuestas-calendar-metric-value">
+                    S/ {{ deuda_fd_mes|floatformat:2|intcomma }}
                 </span>
             </div>
 
