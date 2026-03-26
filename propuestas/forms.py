@@ -37,6 +37,8 @@ class BaseStyledFormMixin:
                 css = TEXTAREA_CLASS
             elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 css = SELECT_CLASS
+            elif isinstance(widget, forms.CheckboxSelectMultiple):
+                css = ""
             elif isinstance(widget, forms.CheckboxInput):
                 css = "form-check-input"
             elif isinstance(widget, forms.ClearableFileInput):
@@ -88,6 +90,11 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
         label="DNI / C.E. del representante",
         max_length=20,
     )
+    tipos_relacionados = forms.MultipleChoiceField(
+        required=False,
+        label="Tipos",
+        widget=forms.CheckboxSelectMultiple,
+    )
 
     class Meta:
         model = Propuesta
@@ -97,6 +104,7 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             "entidad",
             "monto_total",
             "moneda",
+            "tipos_relacionados",
             "comision_monto",
             "comision_fecha",
             "comision_moneda",
@@ -160,6 +168,14 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
         self.fields["comision_cuenta_otro"].required = False
         self.fields["representante_legal_manual"].required = False
         self.fields["dni_representante_manual"].required = False
+        self.fields["tipos_relacionados"].required = False
+
+        if self.fixed_tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:
+            self.fields["tipos_relacionados"].choices = Propuesta.TIPOS_CF
+            self.fields["tipos_relacionados"].label = "Tipos de carta fianza"
+        else:
+            self.fields["tipos_relacionados"].choices = Propuesta.TIPOS_FD
+            self.fields["tipos_relacionados"].label = "Tipos de fideicomiso"
         self.fields["comision_fecha"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
         self.fields["comision_fecha"].widget.format = "%Y-%m-%d"
 
@@ -186,6 +202,7 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             self.fields["dni_representante_manual"].initial = self.instance.dni_representante_snapshot
             self.consorcio_integrantes_inicial = self.instance.consorcio_integrantes_snapshot or ""
             self.fields["empresa"].help_text = "Selecciona la empresa o consorcio de la propuesta."
+            self.initial["tipos_relacionados"] = self.instance.get_tipos_relacionados_list()
         elif empresa_actual:
             data_snapshot = snapshot_empresa(empresa_actual)
             self.fields["es_consorcio_manual"].initial = data_snapshot.get("es_consorcio_snapshot", False)
@@ -242,6 +259,10 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             cleaned_data["representante_legal_manual"] = ""
             cleaned_data["dni_representante_manual"] = ""
 
+        tipos = cleaned_data.get("tipos_relacionados") or []
+        if not tipos:
+            self.add_error("tipos_relacionados", "Debes seleccionar al menos un tipo.")
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -277,6 +298,11 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
 
         instance.entidad = (self.cleaned_data.get("entidad") or "").strip()
 
+        instance.tipos_relacionados = ",".join(
+            self.cleaned_data.get("tipos_relacionados") or []
+        )
+
+
         instance.observaciones_generales = ""
 
         if self.request_user:
@@ -296,6 +322,9 @@ class PropuestaCFForm(PropuestaBaseForm):
 class PropuestaFDForm(PropuestaBaseForm):
     fixed_tipo_propuesta = Propuesta.TipoPropuesta.FIDEICOMISO
 
+# Funcionalidad antigua de enlace con cartas/fideicomisos existentes.
+# Se conserva para posible reactivación futura, pero el flujo actual
+# de crear/editar propuesta ya no la usa.
 
 class PropuestaRelacionCartaFianzaForm(BaseStyledFormMixin, forms.ModelForm):
     class Meta:

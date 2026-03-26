@@ -153,6 +153,31 @@ class Propuesta(models.Model):
         default=Decimal("0.00"),
     )
 
+    tipos_relacionados = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="Tipos seleccionados manualmente para la propuesta."
+    )
+
+    TIPOS_CF = [
+        ("AD", "Adelanto Directo"),
+        ("AM", "Adelanto de Materiales"),
+        ("FC", "Fiel Cumplimiento"),
+    ]
+
+    TIPOS_FD = [
+        ("AD", "Adelanto Directo"),
+        ("AM", "Adelanto de Materiales"),
+    ]
+
+    def get_tipos_relacionados_list(self):
+        return [x for x in (self.tipos_relacionados or "").split(",") if x]
+
+    def get_tipos_relacionados_display_list(self):
+        choices = dict(self.TIPOS_CF if self.tipo_propuesta == self.TipoPropuesta.CARTA_FIANZA else self.TIPOS_FD)
+        return [choices[c] for c in self.get_tipos_relacionados_list() if c in choices]
+
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -267,6 +292,21 @@ class Propuesta(models.Model):
             if not self.dni_representante_snapshot.strip():
                 errors["dni_representante_snapshot"] = "El DNI/C.E. es obligatorio para consorcio."
 
+        tipos = self.get_tipos_relacionados_list()
+        permitidos = {
+            codigo
+            for codigo, _ in (
+                self.TIPOS_CF
+                if self.tipo_propuesta == self.TipoPropuesta.CARTA_FIANZA
+                else self.TIPOS_FD
+            )
+        }
+
+        if not tipos:
+            errors["tipos_relacionados"] = "Debes seleccionar al menos un tipo."
+        elif any(tipo not in permitidos for tipo in tipos):
+            errors["tipos_relacionados"] = "Hay tipos relacionados inválidos para esta propuesta."
+
         if errors:
             raise ValidationError(errors)
 
@@ -276,6 +316,23 @@ class Propuesta(models.Model):
 
         self.facturador_texto = (self.facturador_texto or "").strip()
         self.entidad = (self.entidad or "").strip()
+
+        permitidos = {
+            codigo
+            for codigo, _ in (
+                self.TIPOS_CF
+                if self.tipo_propuesta == self.TipoPropuesta.CARTA_FIANZA
+                else self.TIPOS_FD
+            )
+        }
+
+        tipos_limpios = []
+        for tipo in (self.tipos_relacionados or "").split(","):
+            tipo = tipo.strip()
+            if tipo and tipo in permitidos and tipo not in tipos_limpios:
+                tipos_limpios.append(tipo)
+
+        self.tipos_relacionados = ",".join(tipos_limpios)
 
         if not self.saldo_pendiente and self.monto_total:
             self.saldo_pendiente = self.monto_total - (self.total_pagado or Decimal("0.00"))

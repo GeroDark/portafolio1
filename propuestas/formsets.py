@@ -15,7 +15,9 @@ from .models import (
     PropuestaRelacionFideicomiso,
 )
 
-
+# Funcionalidad antigua de relación con registros existentes.
+# Se conserva para una posible reactivación futura, pero el flujo actual
+# de crear/editar propuesta ya no usa estos formsets.
 class BasePropuestaRelacionCartaFianzaFormSet(BaseInlineFormSet):
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)

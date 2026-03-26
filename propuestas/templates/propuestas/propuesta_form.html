@@ -10,9 +10,9 @@
             <h1 class="mb-1">{{ titulo }}</h1>
             <p class="text-muted mb-0">
                 {% if tipo_propuesta == "CF" %}
-                    Registra una propuesta de carta fianza, sus relaciones y movimientos de pago.
+                    Registra una propuesta de carta fianza, sus tipos y movimientos de pago.
                 {% else %}
-                    Registra una propuesta de fideicomiso, sus relaciones y movimientos de pago.
+                    Registra una propuesta de fideicomiso, sus tipos y movimientos de pago.
                 {% endif %}
             </p>
         </div>
@@ -33,11 +33,7 @@
             </div>
         {% endif %}
 
-        {% if relacion_formset.non_form_errors %}
-            <div class="alert alert-danger">
-                {{ relacion_formset.non_form_errors }}
-            </div>
-        {% endif %}
+        
 
         {% if movimientos_formset.non_form_errors %}
             <div class="alert alert-danger">
@@ -193,54 +189,37 @@
                 </div>
 
                 <div class="card shadow-sm mb-4 propuesta-card propuesta-card-relaciones">
-                    <div class="card-header propuesta-card-header propuesta-card-header-rel d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="card-header propuesta-card-header propuesta-card-header-rel">
                         <h2 class="h5 mb-0">
-                            3. Relacionados
+                            3. Tipos relacionados
                             {% if tipo_propuesta == "CF" %}
-                                (Cartas fianza)
+                                (Carta fianza)
                             {% else %}
-                                (Fideicomisos)
+                                (Fideicomiso)
                             {% endif %}
                         </h2>
-                        <button type="button" class="btn btn-propuesta-add-rel" data-add-formset="rel">
-                            {% if tipo_propuesta == 'CF' %}
-                                Agregar carta fianza
-                            {% else %}
-                                Agregar fideicomiso
-                            {% endif %}
-                        </button>
                     </div>
                     <div class="card-body">
-                        {{ relacion_formset.management_form }}
+                        
 
-                        <div id="rel-formset-container" data-prefix="{{ relacion_formset.prefix }}">
-                            {% for rel_form in relacion_formset %}
-                                <div class="border rounded p-3 mb-3 formset-item">
-                                    {{ rel_form.id }}
-                                    {% if rel_form.non_field_errors %}
-                                        <div class="alert alert-danger py-2">
-                                            {{ rel_form.non_field_errors }}
-                                        </div>
-                                    {% endif %}
-
-                                    {% if tipo_propuesta == "CF" %}
-                                        {% include "propuestas/partials/_relacion_cf_row.html" with form=rel_form %}
-                                    {% else %}
-                                        {% include "propuestas/partials/_relacion_fd_row.html" with form=rel_form %}
-                                    {% endif %}
+                        <div class="row g-3">
+                            {% for checkbox in form.tipos_relacionados %}
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        {{ checkbox.tag }}
+                                        <label class="form-check-label ms-2" for="{{ checkbox.id_for_label }}">
+                                            {{ checkbox.choice_label }}
+                                        </label>
+                                    </div>
                                 </div>
                             {% endfor %}
                         </div>
 
-                        <template id="rel-empty-form-template">
-                            <div class="border rounded p-3 mb-3 formset-item">
-                                {% if tipo_propuesta == "CF" %}
-                                    {% include "propuestas/partials/_relacion_cf_row.html" with form=relacion_formset.empty_form %}
-                                {% else %}
-                                    {% include "propuestas/partials/_relacion_fd_row.html" with form=relacion_formset.empty_form %}
-                                {% endif %}
+                        {% if form.tipos_relacionados.errors %}
+                            <div class="text-danger small mt-2">
+                                {{ form.tipos_relacionados.errors }}
                             </div>
-                        </template>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -364,6 +343,8 @@
 <script src="{% static 'propuestas/propuestas.js' %}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+// Funcionalidad antigua de búsqueda/enlace con cartas o fideicomisos existentes.
+// Se deja sin uso para futura reactivación.
   const empresaField = document.getElementById("id_empresa");
   const consorcioCheck = document.getElementById("id_es_consorcio_manual");
   const consorcioRepWrapper = document.getElementById("consorcio-representante-wrapper");

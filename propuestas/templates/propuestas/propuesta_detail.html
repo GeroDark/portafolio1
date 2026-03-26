@@ -130,78 +130,28 @@
             <div class="card shadow-sm mb-5 propuesta-card">
                 <div class="card-header propuesta-card-header propuesta-card-header-rel">
                     <h2 class="h5 mb-0">
-                        Relacionados
+                        Tipos relacionados
                         {% if propuesta.tipo_propuesta == "CF" %}
-                            (Cartas fianza)
+                            (Carta fianza)
                         {% else %}
-                            (Fideicomisos)
+                            (Fideicomiso)
                         {% endif %}
                     </h2>
                 </div>
                 <div class="card-body">
-                    {% if propuesta.tipo_propuesta == "CF" %}
-                        {% if propuesta.relaciones_cartas.all %}
-                            <div class="table-responsive">
-                                <table class="table align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Número</th>
-                                            <th>Aseguradora</th>
-                                            <th>Tipo</th>
-                                            <th>Monto</th>
-                                            <th>Entidad</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for rel in propuesta.relaciones_cartas.all %}
-                                            <tr>
-                                                <td>{{ rel.orden }}</td>
-                                                <td>{{ rel.snapshot_numero_carta|default:"-" }}</td>
-                                                <td>{{ rel.snapshot_aseguradora|default:"-" }}</td>
-                                                <td>{{ rel.snapshot_tipo_carta|default:"-" }}</td>
-                                                <td>{{ rel.snapshot_monto }}</td>
-                                                <td>{{ rel.snapshot_entidad_beneficiaria|default:"-" }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                    
+
+                    {% with tipos=propuesta.get_tipos_relacionados_display_list %}
+                        {% if tipos %}
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for tipo in tipos %}
+                                    <span class="badge bg-secondary">{{ tipo }}</span>
+                                {% endfor %}
                             </div>
                         {% else %}
-                            <p class="text-muted mb-0">No hay cartas fianza relacionadas.</p>
+                            <p class="text-muted mb-0">No hay tipos seleccionados.</p>
                         {% endif %}
-                    {% else %}
-                        {% if propuesta.relaciones_fideicomisos.all %}
-                            <div class="table-responsive">
-                                <table class="table align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Fiduciaria</th>
-                                            <th>Ejecutora</th>
-                                            <th>Representante</th>
-                                            <th>Residente</th>
-                                            <th>Estado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for rel in propuesta.relaciones_fideicomisos.all %}
-                                            <tr>
-                                                <td>{{ rel.orden }}</td>
-                                                <td>{{ rel.snapshot_fiduciaria|default:"-" }}</td>
-                                                <td>{{ rel.snapshot_ejecutora|default:"-" }}</td>
-                                                <td>{{ rel.snapshot_representante|default:"-" }}</td>
-                                                <td>{{ rel.snapshot_residente|default:"-" }}</td>
-                                                <td>{{ rel.snapshot_estado|default:"-" }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <p class="text-muted mb-0">No hay fideicomisos relacionados.</p>
-                        {% endif %}
-                    {% endif %}
+                    {% endwith %}
                 </div>
             </div>
 

@@ -18,11 +18,7 @@ from .forms import (
     PropuestaDocumentoForm,
     PropuestaFDForm,
 )
-from .formsets import (
-    PropuestaMovimientoPagoFormSet,
-    PropuestaRelacionCartaFianzaFormSet,
-    PropuestaRelacionFideicomisoFormSet,
-)
+from .formsets import PropuestaMovimientoPagoFormSet
 from .models import Propuesta, PropuestaDocumento
 from .permissions import propuestas_access_required, propuestas_manage_required
 from .selectors import (
@@ -40,8 +36,6 @@ from .selectors import (
 from .services import (
     recalculate_propuesta_totals,
     reorder_movimientos,
-    reorder_relaciones_cartas,
-    reorder_relaciones_fideicomisos,
     soft_delete_propuesta,
 )
 
@@ -189,11 +183,9 @@ def calendario_propuestas(request):
 def _build_create_forms(request, tipo_propuesta: str):
     if tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:
         propuesta_form_class = PropuestaCFForm
-        relacion_formset_class = PropuestaRelacionCartaFianzaFormSet
         template_title = "Nueva propuesta de Carta Fianza"
     else:
         propuesta_form_class = PropuestaFDForm
-        relacion_formset_class = PropuestaRelacionFideicomisoFormSet
         template_title = "Nueva propuesta de Fideicomiso"
 
     propuesta_seed = Propuesta(tipo_propuesta=tipo_propuesta)
@@ -217,62 +209,55 @@ def _build_create_forms(request, tipo_propuesta: str):
 
         if propuesta_form.is_valid():
             propuesta_instance = propuesta_form.save(commit=False)
-            relacion_formset = relacion_formset_class(request.POST, instance=propuesta_instance, prefix="rel")
-            movimientos_formset = PropuestaMovimientoPagoFormSet(request.POST, instance=propuesta_instance, prefix="mov")
+            movimientos_formset = PropuestaMovimientoPagoFormSet(
+                request.POST,
+                instance=propuesta_instance,
+                prefix="mov",
+            )
         else:
-            relacion_formset = relacion_formset_class(request.POST, instance=propuesta_seed, prefix="rel")
-            movimientos_formset = PropuestaMovimientoPagoFormSet(request.POST, instance=propuesta_seed, prefix="mov")
+            movimientos_formset = PropuestaMovimientoPagoFormSet(
+                request.POST,
+                instance=propuesta_seed,
+                prefix="mov",
+            )
     else:
         propuesta_form = propuesta_form_class(
             instance=propuesta_seed,
             request_user=request.user,
             initial=initial,
         )
-        relacion_formset = relacion_formset_class(instance=propuesta_seed, prefix="rel")
-        movimientos_formset = PropuestaMovimientoPagoFormSet(instance=propuesta_seed, prefix="mov")
+        movimientos_formset = PropuestaMovimientoPagoFormSet(
+            instance=propuesta_seed,
+            prefix="mov",
+        )
 
-    return propuesta_form, relacion_formset, movimientos_formset, template_title
+    return propuesta_form, movimientos_formset, template_title
 
 
 def _save_create_flow(
     request,
     propuesta_form,
-    relacion_formset,
     movimientos_formset,
-    tipo_propuesta: str,
 ):
     if not propuesta_form.is_valid():
         return None
 
     propuesta = propuesta_form.save(commit=False)
 
-    relacion_formset = relacion_formset.__class__(
-        request.POST,
-        instance=propuesta,
-        prefix=relacion_formset.prefix,
-    )
     movimientos_formset = movimientos_formset.__class__(
         request.POST,
         instance=propuesta,
         prefix=movimientos_formset.prefix,
     )
 
-    if not (relacion_formset.is_valid() and movimientos_formset.is_valid()):
-        return propuesta, relacion_formset, movimientos_formset
+    if not movimientos_formset.is_valid():
+        return propuesta, movimientos_formset
 
     with transaction.atomic():
         propuesta.save()
 
-        relacion_formset.instance = propuesta
         movimientos_formset.instance = propuesta
-
-        relacion_formset.save()
         movimientos_formset.save()
-
-        if tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:
-            reorder_relaciones_cartas(propuesta)
-        else:
-            reorder_relaciones_fideicomisos(propuesta)
 
         reorder_movimientos(propuesta)
         recalculate_propuesta_totals(propuesta, save=True)
@@ -283,7 +268,7 @@ def _save_create_flow(
 
 @propuestas_manage_required
 def crear_propuesta_cf(request):
-    propuesta_form, relacion_formset, movimientos_formset, template_title = _build_create_forms(
+    propuesta_form, movimientos_formset, template_title = _build_create_forms(
         request,
         Propuesta.TipoPropuesta.CARTA_FIANZA,
     )
@@ -292,19 +277,16 @@ def crear_propuesta_cf(request):
         result = _save_create_flow(
             request,
             propuesta_form,
-            relacion_formset,
             movimientos_formset,
-            Propuesta.TipoPropuesta.CARTA_FIANZA,
         )
         if hasattr(result, "status_code"):
             return result
         if result is not None:
-            _, relacion_formset, movimientos_formset = result
+            _, movimientos_formset = result
 
     context = {
         **_base_context(),
         "form": propuesta_form,
-        "relacion_formset": relacion_formset,
         "movimientos_formset": movimientos_formset,
         "modo": "crear",
         "tipo_propuesta": Propuesta.TipoPropuesta.CARTA_FIANZA,
@@ -320,7 +302,7 @@ def crear_propuesta_cf(request):
 
 @propuestas_manage_required
 def crear_propuesta_fd(request):
-    propuesta_form, relacion_formset, movimientos_formset, template_title = _build_create_forms(
+    propuesta_form, movimientos_formset, template_title = _build_create_forms(
         request,
         Propuesta.TipoPropuesta.FIDEICOMISO,
     )
@@ -329,19 +311,16 @@ def crear_propuesta_fd(request):
         result = _save_create_flow(
             request,
             propuesta_form,
-            relacion_formset,
             movimientos_formset,
-            Propuesta.TipoPropuesta.FIDEICOMISO,
         )
         if hasattr(result, "status_code"):
             return result
         if result is not None:
-            _, relacion_formset, movimientos_formset = result
+            _, movimientos_formset = result
 
     context = {
         **_base_context(),
         "form": propuesta_form,
-        "relacion_formset": relacion_formset,
         "movimientos_formset": movimientos_formset,
         "modo": "crear",
         "tipo_propuesta": Propuesta.TipoPropuesta.FIDEICOMISO,
@@ -380,10 +359,8 @@ def editar_propuesta(request, pk):
 
     if propuesta.tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:
         propuesta_form_class = PropuestaCFForm
-        relacion_formset_class = PropuestaRelacionCartaFianzaFormSet
     else:
         propuesta_form_class = PropuestaFDForm
-        relacion_formset_class = PropuestaRelacionFideicomisoFormSet
 
     if request.method == "POST":
         propuesta_form = propuesta_form_class(
@@ -395,31 +372,18 @@ def editar_propuesta(request, pk):
         if propuesta_form.is_valid():
             propuesta_instance = propuesta_form.save(commit=False)
 
-            relacion_formset = relacion_formset_class(
-                request.POST,
-                instance=propuesta_instance,
-                prefix="rel",
-            )
             movimientos_formset = PropuestaMovimientoPagoFormSet(
                 request.POST,
                 instance=propuesta_instance,
                 prefix="mov",
             )
 
-            if relacion_formset.is_valid() and movimientos_formset.is_valid():
+            if movimientos_formset.is_valid():
                 with transaction.atomic():
                     propuesta = propuesta_form.save(commit=True)
 
-                    relacion_formset.instance = propuesta
                     movimientos_formset.instance = propuesta
-
-                    relacion_formset.save()
                     movimientos_formset.save()
-
-                    if propuesta.tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:
-                        reorder_relaciones_cartas(propuesta)
-                    else:
-                        reorder_relaciones_fideicomisos(propuesta)
 
                     reorder_movimientos(propuesta)
                     recalculate_propuesta_totals(propuesta, save=True)
@@ -427,11 +391,6 @@ def editar_propuesta(request, pk):
                 messages.success(request, "La propuesta fue actualizada correctamente.")
                 return redirect("propuestas:detalle", pk=propuesta.pk)
         else:
-            relacion_formset = relacion_formset_class(
-                request.POST,
-                instance=propuesta,
-                prefix="rel",
-            )
             movimientos_formset = PropuestaMovimientoPagoFormSet(
                 request.POST,
                 instance=propuesta,
@@ -443,10 +402,6 @@ def editar_propuesta(request, pk):
             instance=propuesta,
             request_user=request.user,
         )
-        relacion_formset = relacion_formset_class(
-            instance=propuesta,
-            prefix="rel",
-        )
         movimientos_formset = PropuestaMovimientoPagoFormSet(
             instance=propuesta,
             prefix="mov",
@@ -455,7 +410,6 @@ def editar_propuesta(request, pk):
     context = {
         **_base_context(),
         "form": propuesta_form,
-        "relacion_formset": relacion_formset,
         "movimientos_formset": movimientos_formset,
         "propuesta": propuesta,
         "modo": "editar",
