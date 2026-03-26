@@ -20,6 +20,7 @@ def snapshot_empresa(empresa) -> dict:
         "es_consorcio_snapshot": bool(getattr(empresa, "es_consorcio", False)),
         "representante_legal_snapshot": getattr(empresa, "representante_legal", "") or "",
         "dni_representante_snapshot": getattr(empresa, "dni_representante", "") or "",
+        "consorcio_integrantes_snapshot": getattr(empresa, "empresas_consorciadas", "") or "",
     }
 
 

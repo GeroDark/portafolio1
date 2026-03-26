@@ -94,6 +94,7 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
         fields = [
             "empresa",
             "facturador_texto",
+            "entidad",
             "monto_total",
             "moneda",
             "comision_monto",
@@ -105,10 +106,20 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
         ]
         widgets = {
             "comision_fecha": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "facturador_texto": forms.TextInput(attrs={
+                "maxlength": "11",
+                "inputmode": "numeric",
+                "pattern": r"\d{11}",
+                "placeholder": "RUC a facturar",
+            }),
+            "entidad": forms.TextInput(attrs={
+                "placeholder": "Entidad",
+            }),
         }
         labels = {
             "empresa": "Empresa / Consorcio",
-            "facturador_texto": "Facturador",
+            "facturador_texto": "Facturar",
+            "entidad": "Entidad",
             "monto_total": "Monto total de la propuesta",
             "moneda": "Moneda propuesta",
             "comision_monto": "Monto de comisión",
@@ -126,6 +137,26 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields["empresa"].queryset = Empresa.objects.all().order_by("nombre", "nombre_consorcio")
+        def empresa_label(obj):
+            es_consorcio = bool(getattr(obj, "es_consorcio", False))
+            nombre = (
+                (getattr(obj, "nombre_consorcio", "") if es_consorcio else getattr(obj, "nombre", ""))
+                or getattr(obj, "nombre_consorcio", "")
+                or getattr(obj, "nombre", "")
+                or ""
+            )
+            ruc_mostrar = (
+                getattr(obj, "ruc_consorcio", "")
+                or getattr(obj, "ruc", "")
+                or ""
+            )
+
+            if nombre and ruc_mostrar:
+                return f"{nombre} ({ruc_mostrar})"
+            return nombre or ruc_mostrar or f"Empresa {obj.pk}"
+
+        self.fields["empresa"].label_from_instance = empresa_label
+        self.consorcio_integrantes_inicial = ""
         self.fields["comision_cuenta_otro"].required = False
         self.fields["representante_legal_manual"].required = False
         self.fields["dni_representante_manual"].required = False
@@ -153,15 +184,24 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             self.fields["es_consorcio_manual"].initial = self.instance.es_consorcio_snapshot
             self.fields["representante_legal_manual"].initial = self.instance.representante_legal_snapshot
             self.fields["dni_representante_manual"].initial = self.instance.dni_representante_snapshot
+            self.consorcio_integrantes_inicial = self.instance.consorcio_integrantes_snapshot or ""
             self.fields["empresa"].help_text = "Selecciona la empresa o consorcio de la propuesta."
         elif empresa_actual:
             data_snapshot = snapshot_empresa(empresa_actual)
             self.fields["es_consorcio_manual"].initial = data_snapshot.get("es_consorcio_snapshot", False)
             self.fields["representante_legal_manual"].initial = data_snapshot.get("representante_legal_snapshot", "")
             self.fields["dni_representante_manual"].initial = data_snapshot.get("dni_representante_snapshot", "")
+            self.consorcio_integrantes_inicial = data_snapshot.get("consorcio_integrantes_snapshot", "")
             self.fields["empresa"].help_text = "Selecciona la empresa o consorcio de la propuesta."
         else:
             self.fields["empresa"].help_text = "Selecciona la empresa o consorcio de la propuesta."
+
+        if not self.is_bound and empresa_actual and not bool(getattr(empresa_actual, "es_consorcio", False)):
+            self.initial["facturador_texto"] = (
+                self.instance.facturador_texto
+                or empresa_actual.ruc
+                or ""
+            )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -169,13 +209,30 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
         cuenta = cleaned_data.get("comision_cuenta")
         cuenta_otro = (cleaned_data.get("comision_cuenta_otro") or "").strip()
 
+        empresa = cleaned_data.get("empresa")
         es_consorcio = bool(cleaned_data.get("es_consorcio_manual"))
         representante = (cleaned_data.get("representante_legal_manual") or "").strip()
         dni = (cleaned_data.get("dni_representante_manual") or "").strip()
+        facturar = (cleaned_data.get("facturador_texto") or "").strip()
+        entidad = (cleaned_data.get("entidad") or "").strip()
 
         if cuenta == Propuesta.ComisionCuenta.OTROS and not cuenta_otro:
             self.add_error("comision_cuenta_otro", "Debes especificar la cuenta cuando eliges 'Otros'.")
 
+        if empresa and not es_consorcio:
+            facturar = (empresa.ruc or "").strip()
+            cleaned_data["facturador_texto"] = facturar
+
+        if not facturar or not facturar.isdigit() or len(facturar) != 11:
+            self.add_error("facturador_texto", "Debes ingresar un RUC válido de 11 dígitos.")
+
+        if not entidad:
+            self.add_error("entidad", "Debes indicar la entidad.")
+
+        if empresa and not es_consorcio:
+            facturar = (empresa.ruc or "").strip()
+            cleaned_data["facturador_texto"] = facturar
+        
         if es_consorcio:
             if not representante:
                 self.add_error("representante_legal_manual", "Debes indicar el representante legal.")
@@ -208,7 +265,18 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             else ""
         )
 
-        # ya no se usa en pantalla
+        instance.consorcio_integrantes_snapshot = (
+            (instance.empresa.empresas_consorciadas or "").strip()
+            if instance.es_consorcio_snapshot and instance.empresa_id
+            else ""
+        )
+
+        instance.facturador_texto = (self.cleaned_data.get("facturador_texto") or "").strip()
+        if instance.empresa_id and not instance.es_consorcio_snapshot:
+            instance.facturador_texto = (instance.empresa.ruc or "").strip()
+
+        instance.entidad = (self.cleaned_data.get("entidad") or "").strip()
+
         instance.observaciones_generales = ""
 
         if self.request_user:

@@ -10,6 +10,8 @@ from empresas.models import CartaFianza, Empresa, Fideicomiso
 
 from .models import Propuesta, PropuestaMovimientoPago
 
+import re
+
 
 def _existing_model_fields(model) -> set[str]:
     return {field.name for field in model._meta.get_fields() if hasattr(field, "attname")}
@@ -335,16 +337,45 @@ def calendario_propuestas_mes(base_date: date):
         "cantidad_vencimientos": len(vencimientos),
     }
 
+def _limpiar_integrantes_consorcio(raw: str) -> list[str]:
+    items = []
+
+    for part in (raw or "").split(","):
+        limpio = re.sub(r"\s*\(\s*\d+(?:[.,]\d+)?%\s*\)\s*$", "", part.strip())
+        if limpio:
+            items.append(limpio)
+
+    return items
+
 def serialize_empresa(empresa: Empresa) -> dict:
-    nombre = getattr(empresa, "nombre_consorcio", "") or getattr(empresa, "nombre", "") or ""
+    es_consorcio = bool(getattr(empresa, "es_consorcio", False))
+
+    nombre = (
+        (getattr(empresa, "nombre_consorcio", "") if es_consorcio else getattr(empresa, "nombre", ""))
+        or getattr(empresa, "nombre_consorcio", "")
+        or getattr(empresa, "nombre", "")
+        or ""
+    )
+
+    ruc_empresa = getattr(empresa, "ruc", "") or ""
+    ruc_consorcio = getattr(empresa, "ruc_consorcio", "") or ""
+    ruc_mostrar = ruc_consorcio if es_consorcio and ruc_consorcio else ruc_empresa
+
+    integrantes_raw = getattr(empresa, "empresas_consorciadas", "") or ""
+    integrantes_lista = _limpiar_integrantes_consorcio(integrantes_raw)
+
     return {
         "id": empresa.id,
-        "label": f"{nombre} - {getattr(empresa, 'ruc', '')}".strip(" -"),
+        "label": f"{nombre} ({ruc_mostrar})".strip(),
         "nombre": nombre,
-        "ruc": getattr(empresa, "ruc", "") or "",
-        "es_consorcio": bool(getattr(empresa, "es_consorcio", False)),
+        "ruc": ruc_empresa,
+        "ruc_mostrar": ruc_mostrar,
+        "ruc_facturar_auto": "" if es_consorcio else ruc_empresa,
+        "es_consorcio": es_consorcio,
         "representante_legal": getattr(empresa, "representante_legal", "") or "",
         "dni_representante": getattr(empresa, "dni_representante", "") or "",
+        "integrantes_consorcio": integrantes_raw,
+        "integrantes_consorcio_lista": integrantes_lista,
     }
 
 

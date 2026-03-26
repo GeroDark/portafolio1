@@ -9,6 +9,8 @@ from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from empresas.models import Empresa
+
 
 from .forms import (
     BuscarPropuestasForm,
@@ -482,6 +484,15 @@ def eliminar_propuesta(request, pk):
 
 @propuestas_access_required
 def ajax_buscar_empresas(request):
+    empresa_id_raw = (request.GET.get("id") or "").strip()
+    if empresa_id_raw.isdigit():
+        empresa = Empresa.objects.filter(pk=int(empresa_id_raw)).first()
+        return JsonResponse(
+            {
+                "result": serialize_empresa(empresa) if empresa else None,
+            }
+        )
+
     q = (request.GET.get("q") or request.GET.get("term") or "").strip()
     resultados = buscar_empresas_para_propuestas(q, limit=20)
     return JsonResponse(

@@ -54,65 +54,83 @@
 
                     <div class="card-body">
                         <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label" for="{{ form.empresa.id_for_label }}">{{ form.empresa.label }}</label>
-                            {{ form.empresa }}
-                            {% if form.empresa.help_text %}
-                            <div class="form-text">{{ form.empresa.help_text }}</div>
-                            {% endif %}
-                            {% if form.empresa.errors %}
-                            <div class="text-danger small mt-1">{{ form.empresa.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label" for="{{ form.facturador_texto.id_for_label }}">{{ form.facturador_texto.label }}</label>
-                            {{ form.facturador_texto }}
-                            {% if form.facturador_texto.errors %}
-                            <div class="text-danger small mt-1">{{ form.facturador_texto.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-3 d-flex align-items-center">
-                            <div class="form-check mt-4">
-                            {{ form.es_consorcio_manual }}
-                            <label class="form-check-label ms-2" for="{{ form.es_consorcio_manual.id_for_label }}">
-                                {{ form.es_consorcio_manual.label }}
-                            </label>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.empresa.id_for_label }}">{{ form.empresa.label }}</label>
+                                {{ form.empresa }}
+                                {% if form.empresa.help_text %}
+                                    <div class="form-text">{{ form.empresa.help_text }}</div>
+                                {% endif %}
+                                {% if form.empresa.errors %}
+                                    <div class="text-danger small mt-1">{{ form.empresa.errors }}</div>
+                                {% endif %}
                             </div>
-                        </div>
 
-                        <div class="col-md-5" id="consorcio-representante-wrapper">
-                            <label class="form-label" for="{{ form.representante_legal_manual.id_for_label }}">{{ form.representante_legal_manual.label }}</label>
-                            {{ form.representante_legal_manual }}
-                            {% if form.representante_legal_manual.errors %}
-                            <div class="text-danger small mt-1">{{ form.representante_legal_manual.errors }}</div>
-                            {% endif %}
-                        </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.facturador_texto.id_for_label }}">{{ form.facturador_texto.label }}</label>
+                                {{ form.facturador_texto }}
+                                <div class="form-text">
+                                    Si eliges una empresa, se llena automáticamente con su RUC. Si eliges un consorcio, lo completas manualmente.
+                                </div>
+                                {% if form.facturador_texto.errors %}
+                                    <div class="text-danger small mt-1">{{ form.facturador_texto.errors }}</div>
+                                {% endif %}
+                            </div>
 
-                        <div class="col-md-4" id="consorcio-dni-wrapper">
-                            <label class="form-label" for="{{ form.dni_representante_manual.id_for_label }}">{{ form.dni_representante_manual.label }}</label>
-                            {{ form.dni_representante_manual }}
-                            {% if form.dni_representante_manual.errors %}
-                            <div class="text-danger small mt-1">{{ form.dni_representante_manual.errors }}</div>
-                            {% endif %}
-                        </div>
+                            <div class="col-12 d-none" id="consorcio-integrantes-wrapper">
+                                <label class="form-label">Integrantes del consorcio</label>
+                                <div class="border rounded bg-light p-3" id="consorcio-integrantes-box">
+                                    <ul class="mb-0 ps-3" id="consorcio-integrantes-list"></ul>
+                                </div>
+                            </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label" for="{{ form.monto_total.id_for_label }}">{{ form.monto_total.label }}</label>
-                            {{ form.monto_total }}
-                            {% if form.monto_total.errors %}
-                            <div class="text-danger small mt-1">{{ form.monto_total.errors }}</div>
-                            {% endif %}
-                        </div>
+                            <div class="col-md-8">
+                                <label class="form-label" for="{{ form.entidad.id_for_label }}">{{ form.entidad.label }}</label>
+                                {{ form.entidad }}
+                                {% if form.entidad.errors %}
+                                    <div class="text-danger small mt-1">{{ form.entidad.errors }}</div>
+                                {% endif %}
+                            </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label" for="{{ form.moneda.id_for_label }}">{{ form.moneda.label }}</label>
-                            {{ form.moneda }}
-                            {% if form.moneda.errors %}
-                            <div class="text-danger small mt-1">{{ form.moneda.errors }}</div>
-                            {% endif %}
-                        </div>
+                            <div class="col-md-4 d-flex align-items-center">
+                                <div class="form-check mt-md-4">
+                                    {{ form.es_consorcio_manual }}
+                                    <label class="form-check-label ms-2" for="{{ form.es_consorcio_manual.id_for_label }}">
+                                        {{ form.es_consorcio_manual.label }}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6" id="consorcio-representante-wrapper">
+                                <label class="form-label" for="{{ form.representante_legal_manual.id_for_label }}">{{ form.representante_legal_manual.label }}</label>
+                                {{ form.representante_legal_manual }}
+                                {% if form.representante_legal_manual.errors %}
+                                    <div class="text-danger small mt-1">{{ form.representante_legal_manual.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6" id="consorcio-dni-wrapper">
+                                <label class="form-label" for="{{ form.dni_representante_manual.id_for_label }}">{{ form.dni_representante_manual.label }}</label>
+                                {{ form.dni_representante_manual }}
+                                {% if form.dni_representante_manual.errors %}
+                                    <div class="text-danger small mt-1">{{ form.dni_representante_manual.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.monto_total.id_for_label }}">{{ form.monto_total.label }}</label>
+                                {{ form.monto_total }}
+                                {% if form.monto_total.errors %}
+                                    <div class="text-danger small mt-1">{{ form.monto_total.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.moneda.id_for_label }}">{{ form.moneda.label }}</label>
+                                {{ form.moneda }}
+                                {% if form.moneda.errors %}
+                                    <div class="text-danger small mt-1">{{ form.moneda.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>

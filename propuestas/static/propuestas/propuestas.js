@@ -339,10 +339,127 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    
+
+    function renderIntegrantesConsorcio(items) {
+        const wrapper = document.getElementById("consorcio-integrantes-wrapper");
+        const list = document.getElementById("consorcio-integrantes-list");
+
+        if (!wrapper || !list) return;
+
+        list.innerHTML = "";
+
+        const finalItems = Array.isArray(items) ? items.filter(Boolean) : [];
+
+        if (!finalItems.length) {
+            wrapper.classList.add("d-none");
+            return;
+        }
+
+        finalItems.forEach((item) => {
+            const li = document.createElement("li");
+            li.className = "mb-1";
+            li.textContent = item;
+            list.appendChild(li);
+        });
+
+        wrapper.classList.remove("d-none");
+    }
+
+    function applyEmpresaDataToForm(payload) {
+        const consorcioCheck = document.getElementById("id_es_consorcio_manual");
+        const repField = document.getElementById("id_representante_legal_manual");
+        const dniField = document.getElementById("id_dni_representante_manual");
+        const facturarField = document.getElementById("id_facturador_texto");
+
+        if (!payload) {
+            renderIntegrantesConsorcio([]);
+            if (facturarField) {
+                facturarField.readOnly = false;
+            }
+            return;
+        }
+
+        const esConsorcio = Boolean(payload.es_consorcio);
+
+        if (consorcioCheck) {
+            consorcioCheck.checked = esConsorcio;
+            consorcioCheck.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        if (repField) {
+            repField.value = esConsorcio ? (payload.representante_legal || "") : "";
+        }
+
+        if (dniField) {
+            dniField.value = esConsorcio ? (payload.dni_representante || "") : "";
+        }
+
+        if (facturarField) {
+            if (esConsorcio) {
+                facturarField.readOnly = false;
+                if (facturarField.dataset.autoRuc === "1") {
+                    facturarField.value = "";
+                }
+                facturarField.dataset.autoRuc = "0";
+            } else {
+                facturarField.value = payload.ruc_facturar_auto || "";
+                facturarField.readOnly = true;
+                facturarField.dataset.autoRuc = "1";
+            }
+        }
+
+        renderIntegrantesConsorcio(payload.integrantes_consorcio_lista || []);
+    }
+
+    async function fetchEmpresaFormData(empresaId) {
+        const empresaField = document.getElementById("id_empresa");
+        if (!empresaField) return;
+
+        const url = empresaField.dataset.autocompleteUrl;
+        if (!url) return;
+
+        if (!empresaId) {
+            applyEmpresaDataToForm(null);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${url}?id=${encodeURIComponent(empresaId)}`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            applyEmpresaDataToForm(data.result || null);
+        } catch (error) {
+            console.error("No se pudo obtener la empresa/consorcio seleccionado", error);
+        }
+    }
+
+    function bindPropuestaEmpresaChange() {
+        const empresaField = document.getElementById("id_empresa");
+        if (!empresaField || empresaField.dataset.boundEmpresaForm === "1") return;
+
+        empresaField.addEventListener("change", function () {
+            fetchEmpresaFormData(this.value);
+        });
+
+        if (empresaField.value) {
+            fetchEmpresaFormData(empresaField.value);
+        }
+
+        empresaField.dataset.boundEmpresaForm = "1";
+    }
+
     bindAddFormsetButtons();
     bindResumenBaseEvents();
     initMovimientos();
     updateCuentaOtroVisibility();
     updateResumen();
+    bindPropuestaEmpresaChange();
     initEmpresaAutocomplete();
 });

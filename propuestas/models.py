@@ -13,6 +13,10 @@ dni_validator = RegexValidator(
     regex=r"^[0-9A-Za-z\-]+$",
     message="Solo se permiten letras, números y guiones.",
 )
+ruc_validator = RegexValidator(
+    regex=r"^\d{11}$",
+    message="Debes ingresar un RUC válido de 11 dígitos.",
+)
 
 
 def propuesta_document_upload_to(instance, filename):
@@ -67,6 +71,7 @@ class Propuesta(models.Model):
     )
 
     # Snapshot empresa / consorcio
+    # Snapshot empresa / consorcio
     empresa_nombre_snapshot = models.CharField(max_length=200, blank=True)
     es_consorcio_snapshot = models.BooleanField(default=False)
     representante_legal_snapshot = models.CharField(max_length=200, blank=True)
@@ -75,9 +80,14 @@ class Propuesta(models.Model):
         blank=True,
         validators=[dni_validator],
     )
+    consorcio_integrantes_snapshot = models.TextField(blank=True, default="")
 
     # Datos propios de la propuesta
-    facturador_texto = models.CharField(max_length=200)
+    facturador_texto = models.CharField(
+        max_length=200,
+        validators=[ruc_validator],
+    )
+    entidad = models.CharField(max_length=200, blank=True, default="")
     monto_total = models.DecimalField(
         max_digits=14,
         decimal_places=2,
@@ -196,6 +206,7 @@ class Propuesta(models.Model):
         self.es_consorcio_snapshot = bool(self.empresa.es_consorcio)
         self.representante_legal_snapshot = self.empresa.representante_legal or ""
         self.dni_representante_snapshot = self.empresa.dni_representante or ""
+        self.consorcio_integrantes_snapshot = self.empresa.empresas_consorciadas or ""
 
     def recalculate_totals(self, save=True):
         agg = self.movimientos.aggregate(
@@ -243,13 +254,18 @@ class Propuesta(models.Model):
         if self.comision_cuenta == self.ComisionCuenta.OTROS and not self.comision_cuenta_otro.strip():
             errors["comision_cuenta_otro"] = "Debes especificar la cuenta cuando eliges 'Otros'."
 
+        facturar = (self.facturador_texto or "").strip()
+        if not facturar or not facturar.isdigit() or len(facturar) != 11:
+            errors["facturador_texto"] = "Debes ingresar un RUC válido de 11 dígitos."
+
+        if not (self.entidad or "").strip():
+            errors["entidad"] = "Debes indicar la entidad."
+
         if self.es_consorcio_snapshot:
             if not self.representante_legal_snapshot.strip():
                 errors["representante_legal_snapshot"] = "El representante legal es obligatorio para consorcio."
             if not self.dni_representante_snapshot.strip():
                 errors["dni_representante_snapshot"] = "El DNI/C.E. es obligatorio para consorcio."
-
-        
 
         if errors:
             raise ValidationError(errors)
@@ -258,7 +274,8 @@ class Propuesta(models.Model):
         if self.empresa_id and not self.empresa_nombre_snapshot:
             self.sync_snapshot_empresa()
 
-        
+        self.facturador_texto = (self.facturador_texto or "").strip()
+        self.entidad = (self.entidad or "").strip()
 
         if not self.saldo_pendiente and self.monto_total:
             self.saldo_pendiente = self.monto_total - (self.total_pagado or Decimal("0.00"))

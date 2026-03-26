@@ -65,9 +65,21 @@
                             {{ propuesta.empresa_nombre_snapshot }}
                         </div>
                         <div class="col-md-6">
-                            <strong>Facturador:</strong><br>
-                            {{ propuesta.facturador_texto }}
+                            <strong>Facturar:</strong><br>
+                            {{ propuesta.facturador_texto|default:"-" }}
                         </div>
+
+                        <div class="col-md-6">
+                            <strong>Entidad:</strong><br>
+                            {{ propuesta.entidad|default:"-" }}
+                        </div>
+
+                        {% if propuesta.es_consorcio_snapshot %}
+                            <div class="col-md-6">
+                                <strong>Integrantes del consorcio:</strong><br>
+                                {{ propuesta.consorcio_integrantes_snapshot|default:"-"|linebreaksbr }}
+                            </div>
+                        {% endif %}
 
                         <div class="col-md-6">
                             <strong>Representante legal:</strong><br>
