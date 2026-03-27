@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import calendar
 from datetime import date, datetime
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Count, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -76,6 +78,86 @@ MONTH_NAMES_ES = (
     "Diciembre",
 )
 
+RESUMEN_VISTAS = (
+    ("calendario", "Calendario"),
+    ("emitido", "Emitido"),
+    ("deuda", "Deuda"),
+    ("adelanto", "Adelanto"),
+    ("cancelado", "Cancelado"),
+)
+ESTADOS_CALENDARIO = (
+    ("pendiente", "Pendiente"),
+    ("con_adelantos", "Con adelantos"),
+    ("cancelada", "Cancelada"),
+)
+
+ESTADOS_CALENDARIO_DEFAULT = ["pendiente", "con_adelantos"]
+
+
+def _parse_estados_calendario(request):
+    permitidos = {key for key, _ in ESTADOS_CALENDARIO}
+    seleccionados = [
+        item for item in request.GET.getlist("estado")
+        if item in permitidos
+    ]
+    return seleccionados or ESTADOS_CALENDARIO_DEFAULT.copy()
+
+
+def _parse_resumen_vista(raw_value: str | None) -> str:
+    permitidas = {key for key, _ in RESUMEN_VISTAS}
+    return raw_value if raw_value in permitidas else "calendario"
+
+
+def _empresa_label(propuesta: Propuesta) -> str:
+    empresa = getattr(propuesta, "empresa", None)
+    return (
+        getattr(propuesta, "empresa_nombre_snapshot", "")
+        or getattr(empresa, "nombre_consorcio", "")
+        or getattr(empresa, "nombre", "")
+        or ""
+    )
+
+
+def _build_resumen_grupos(propuestas):
+    grupos = []
+    grupo_actual = None
+    clave_actual = None
+
+    for propuesta in propuestas:
+        created = (
+            timezone.localtime(propuesta.created_at)
+            if timezone.is_aware(propuesta.created_at)
+            else propuesta.created_at
+        )
+        clave = (created.year, created.month)
+
+        if clave != clave_actual:
+            grupo_actual = {
+                "titulo": f"{MONTH_NAMES_ES[created.month - 1]} {created.year}",
+                "items": [],
+            }
+            grupos.append(grupo_actual)
+            clave_actual = clave
+
+        grupo_actual["items"].append(
+            {
+                "id": propuesta.id,
+                "codigo": propuesta.codigo,
+                "empresa_nombre": _empresa_label(propuesta),
+                "tipo_propuesta_label": propuesta.get_tipo_propuesta_display(),
+                "fecha_creacion": created.date(),
+                "entidad": propuesta.entidad,
+                "moneda": propuesta.moneda,
+                "monto_control": propuesta.comision_monto,
+                "saldo_pendiente": propuesta.saldo_pendiente,
+                "total_adelantado": propuesta.total_adelantado,
+                "total_cancelado": propuesta.total_cancelado,
+                "estado_pago": propuesta.estado_pago_actual,
+                "tipos_relacionados": propuesta.get_tipos_relacionados_display_list(),
+            }
+        )
+
+    return grupos
 
 def _parse_calendar_month(raw_value: str | None, fallback: date) -> date:
     if not raw_value:
@@ -133,6 +215,11 @@ def buscar_propuestas(request):
 def calendario_propuestas(request):
     today = timezone.localdate()
     base_date = _parse_calendar_month(request.GET.get("m"), today)
+    vista_actual = _parse_resumen_vista(request.GET.get("vista"))
+    estados_calendario_activos = _parse_estados_calendario(request)
+    estados_calendario_query = urlencode(
+        [("estado", estado) for estado in estados_calendario_activos]
+    )
 
     payload = calendario_propuestas_mes(base_date)
 
@@ -142,7 +229,11 @@ def calendario_propuestas(request):
     for semana in cal.monthdatescalendar(base_date.year, base_date.month):
         fila = []
         for day in semana:
-            eventos = payload["eventos_por_fecha"].get(day, [])
+            eventos = [
+                evento
+                for evento in payload["eventos_por_fecha"].get(day, [])
+                if evento.get("estado_pago") in estados_calendario_activos
+            ]
             fila.append(
                 {
                     "fecha": day,
@@ -159,8 +250,55 @@ def calendario_propuestas(request):
     prev_month = _shift_month(base_date, -1)
     next_month = _shift_month(base_date, 1)
 
+    propuestas_base = (
+        Propuesta.objects.activos()
+        .select_related("empresa")
+        .order_by("-created_at", "-id")
+    )
+
+    conteos = propuestas_base.aggregate(
+        emitido=Count("id"),
+        deuda=Count("id", filter=Q(estado_pago_actual="pendiente")),
+        adelanto=Count("id", filter=Q(estado_pago_actual="con_adelantos")),
+        cancelado=Count("id", filter=Q(estado_pago_actual="cancelada")),
+    )
+
+    propuestas_vista = propuestas_base
+    if vista_actual == "deuda":
+        propuestas_vista = propuestas_base.filter(estado_pago_actual="pendiente")
+    elif vista_actual == "adelanto":
+        propuestas_vista = propuestas_base.filter(estado_pago_actual="con_adelantos")
+    elif vista_actual == "cancelado":
+        propuestas_vista = propuestas_base.filter(estado_pago_actual="cancelada")
+
+    resumen_grupos = (
+        _build_resumen_grupos(propuestas_vista)
+        if vista_actual != "calendario"
+        else []
+    )
+
     context = {
         **_base_context(submodulo_activo="calendario"),
+        "vista_actual": vista_actual,
+        "vistas_resumen": [
+            {"key": "calendario", "label": "Calendario"},
+            {"key": "emitido", "label": "Emitido", "count": conteos["emitido"] or 0},
+            {"key": "deuda", "label": "Deuda", "count": conteos["deuda"] or 0},
+            {"key": "adelanto", "label": "Adelanto", "count": conteos["adelanto"] or 0},
+            {"key": "cancelado", "label": "Cancelado", "count": conteos["cancelado"] or 0},
+        ],
+        "estados_calendario": [
+            {"key": key, "label": label}
+            for key, label in ESTADOS_CALENDARIO
+        ],
+        "estados_calendario_activos": estados_calendario_activos,
+        "estados_calendario_query": estados_calendario_query,
+        "conteo_emitido": conteos["emitido"] or 0,
+        "conteo_deuda": conteos["deuda"] or 0,
+        "conteo_adelanto": conteos["adelanto"] or 0,
+        "conteo_cancelado": conteos["cancelado"] or 0,
+        "resumen_grupos": resumen_grupos,
+        "cantidad_visible": sum(len(grupo["items"]) for grupo in resumen_grupos),
         "dias_semana": ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
         "semanas": semanas,
         "mes_actual": base_date.strftime("%Y-%m"),
@@ -178,7 +316,6 @@ def calendario_propuestas(request):
         "cantidad_vencimientos": payload["cantidad_vencimientos"],
     }
     return render(request, "propuestas/calendario_propuestas.html", context)
-
 
 def _build_create_forms(request, tipo_propuesta: str):
     if tipo_propuesta == Propuesta.TipoPropuesta.CARTA_FIANZA:

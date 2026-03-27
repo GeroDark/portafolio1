@@ -106,7 +106,7 @@ class BasePropuestaMovimientoPagoFormSet(BaseInlineFormSet):
         if not self.instance:
             return
 
-        monto_total = self.instance.monto_total or Decimal("0.00")
+        base_monto = self.instance.comision_monto or self.instance.monto_total or Decimal("0.00")
         activos = []
 
         for form in self.forms:
@@ -135,8 +135,8 @@ class BasePropuestaMovimientoPagoFormSet(BaseInlineFormSet):
 
             total += monto
 
-            if total > monto_total:
-                form.add_error("monto", "La suma de movimientos no puede superar el monto total de la propuesta.")
+            if total > base_monto:
+                form.add_error("monto", "La suma de movimientos no puede superar el monto de comisión de la propuesta.")
 
             if tipo_movimiento == PropuestaMovimientoPago.TipoMovimiento.CANCELACION:
                 cancelaciones += 1
@@ -149,7 +149,7 @@ class BasePropuestaMovimientoPagoFormSet(BaseInlineFormSet):
         if cancelacion_index is not None:
             cancel_form, cancel_cleaned = activos[cancelacion_index]
             cancel_monto = cancel_cleaned.get("monto") or Decimal("0.00")
-            restante = monto_total - total_antes_cancelacion
+            restante = base_monto - total_antes_cancelacion
 
             if cancel_monto != restante:
                 cancel_form.add_error("monto", "La cancelación debe cerrar exactamente el saldo restante.")

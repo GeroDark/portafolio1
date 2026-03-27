@@ -104,7 +104,6 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
             "entidad",
             "monto_total",
             "moneda",
-            "tipos_relacionados",
             "comision_monto",
             "comision_fecha",
             "comision_moneda",
@@ -143,6 +142,9 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.request_user = kwargs.pop("request_user", None)
         super().__init__(*args, **kwargs)
+
+        if self.fixed_tipo_propuesta:
+            self.instance.tipo_propuesta = self.fixed_tipo_propuesta
 
         self.fields["empresa"].queryset = Empresa.objects.all().order_by("nombre", "nombre_consorcio")
         def empresa_label(obj):
@@ -219,6 +221,15 @@ class PropuestaBaseForm(BaseStyledFormMixin, forms.ModelForm):
                 or empresa_actual.ruc
                 or ""
             )
+
+    def _post_clean(self):
+        if self.fixed_tipo_propuesta:
+            self.instance.tipo_propuesta = self.fixed_tipo_propuesta
+
+        tipos = self.cleaned_data.get("tipos_relacionados") or []
+        self.instance.tipos_relacionados = ",".join(tipos)
+
+        super()._post_clean()
 
     def clean(self):
         cleaned_data = super().clean()

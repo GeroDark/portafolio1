@@ -3,7 +3,7 @@
 {% load humanize %}
 
 {% block page_bg %}calendario{% endblock %}
-{% block title %}Calendario propuestas{% endblock %}
+{% block title %}Resumen{% endblock %}
 {% block main_container_wrapper %}container-fluid{% endblock %}
 {% block main_container_classes %}mt-4{% endblock %}
 
@@ -11,10 +11,23 @@
 <div class="mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
-            <h1 class="mb-1">Calendario de propuestas</h1>
+            <h1 class="mb-1">Resumen de propuestas</h1>
             <p class="text-muted mb-0">
-                Propuestas registradas, pagos realizados y vencimientos de crédito del mes.
+                Vista general de propuestas, pagos y estados de cobranza.
             </p>
+            <div class="propuestas-resumen-tabs">
+                {% for item in vistas_resumen %}
+                    <a
+                        href="{% url 'propuestas:calendario' %}?vista={{ item.key }}&m={{ mes_actual }}{% if estados_calendario_query %}&{{ estados_calendario_query }}{% endif %}"
+                        class="propuestas-resumen-tab {% if vista_actual == item.key %}is-active{% endif %}"
+                    >
+                        <span>{{ item.label }}</span>
+                        {% if item.count is not None %}
+                            <span class="badge rounded-pill text-bg-light">{{ item.count }}</span>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
@@ -22,184 +35,319 @@
 <div class="propuestas-calendar-layout">
     <aside class="propuestas-calendar-sidebar">
         <div class="propuestas-calendar-panel">
-            <div class="propuestas-calendar-title">{{ mes_titulo }}</div>
-            <div class="propuestas-calendar-subtitle">
-                Resumen del mes mostrado en el calendario
-            </div>
-
-            <div class="propuestas-calendar-metric">
-                <span class="propuestas-calendar-metric-label">Ingresos Carta Fianza</span>
-                <span class="propuestas-calendar-metric-value">
-                    S/ {{ ingresos_cf_mes|floatformat:2|intcomma }}
-                </span>
-            </div>
-
-            <div class="propuestas-calendar-metric">
-                <span class="propuestas-calendar-metric-label">Deuda Carta Fianza</span>
-                <span class="propuestas-calendar-metric-value">
-                    S/ {{ deuda_cf_mes|floatformat:2|intcomma }}
-                </span>
-            </div>
-
-            <div class="propuestas-calendar-metric">
-                <span class="propuestas-calendar-metric-label">Ingresos Fideicomiso</span>
-                <span class="propuestas-calendar-metric-value">
-                    S/ {{ ingresos_fd_mes|floatformat:2|intcomma }}
-                </span>
-            </div>
-
-            <div class="propuestas-calendar-metric">
-                <span class="propuestas-calendar-metric-label">Deuda Fideicomiso</span>
-                <span class="propuestas-calendar-metric-value">
-                    S/ {{ deuda_fd_mes|floatformat:2|intcomma }}
-                </span>
-            </div>
-
-            <div class="propuestas-calendar-mini-stats">
-                <div class="propuestas-calendar-mini-stat">
-                    <span>Propuestas registradas</span>
-                    <strong>{{ cantidad_propuestas }}</strong>
+            {% if vista_actual == "calendario" %}
+                <div class="propuestas-calendar-title">{{ mes_titulo }}</div>
+                <div class="propuestas-calendar-subtitle">
+                    Resumen del mes mostrado en el calendario
                 </div>
-                <div class="propuestas-calendar-mini-stat">
-                    <span>Pagos realizados</span>
-                    <strong>{{ cantidad_pagos }}</strong>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Ingresos Carta Fianza</span>
+                    <span class="propuestas-calendar-metric-value">
+                        S/ {{ ingresos_cf_mes|floatformat:2|intcomma }}
+                    </span>
                 </div>
-                <div class="propuestas-calendar-mini-stat">
-                    <span>Vencimientos de crédito</span>
-                    <strong>{{ cantidad_vencimientos }}</strong>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Deuda Carta Fianza</span>
+                    <span class="propuestas-calendar-metric-value">
+                        S/ {{ deuda_cf_mes|floatformat:2|intcomma }}
+                    </span>
                 </div>
-            </div>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Ingresos Fideicomiso</span>
+                    <span class="propuestas-calendar-metric-value">
+                        S/ {{ ingresos_fd_mes|floatformat:2|intcomma }}
+                    </span>
+                </div>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Deuda Fideicomiso</span>
+                    <span class="propuestas-calendar-metric-value">
+                        S/ {{ deuda_fd_mes|floatformat:2|intcomma }}
+                    </span>
+                </div>
+
+                <div class="propuestas-calendar-mini-stats">
+                    <div class="propuestas-calendar-mini-stat">
+                        <span>Propuestas registradas</span>
+                        <strong>{{ cantidad_propuestas }}</strong>
+                    </div>
+                    <div class="propuestas-calendar-mini-stat">
+                        <span>Pagos realizados</span>
+                        <strong>{{ cantidad_pagos }}</strong>
+                    </div>
+                    <div class="propuestas-calendar-mini-stat">
+                        <span>Vencimientos de crédito</span>
+                        <strong>{{ cantidad_vencimientos }}</strong>
+                    </div>
+                </div>
+                <form method="get" class="propuestas-calendar-filters">
+                    <input type="hidden" name="vista" value="calendario">
+                    <input type="hidden" name="m" value="{{ mes_actual }}">
+
+                    <div class="propuestas-calendar-filters-title">
+                        Mostrar en calendario
+                    </div>
+
+                    <div class="propuestas-calendar-filter-options">
+                        {% for estado in estados_calendario %}
+                            <label class="propuestas-calendar-filter-option">
+                                <input
+                                    type="checkbox"
+                                    name="estado"
+                                    value="{{ estado.key }}"
+                                    {% if estado.key in estados_calendario_activos %}checked{% endif %}
+                                    onchange="this.form.submit()"
+                                >
+                                <span>{{ estado.label }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+
+                    
+                </form>
+            {% else %}
+                <div class="propuestas-calendar-title">Resumen general</div>
+                <div class="propuestas-calendar-subtitle">
+                    Estado actual de las propuestas registradas
+                </div>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Emitidas</span>
+                    <span class="propuestas-calendar-metric-value">{{ conteo_emitido }}</span>
+                </div>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Deuda</span>
+                    <span class="propuestas-calendar-metric-value">{{ conteo_deuda }}</span>
+                </div>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Con adelanto</span>
+                    <span class="propuestas-calendar-metric-value">{{ conteo_adelanto }}</span>
+                </div>
+
+                <div class="propuestas-calendar-metric">
+                    <span class="propuestas-calendar-metric-label">Canceladas</span>
+                    <span class="propuestas-calendar-metric-value">{{ conteo_cancelado }}</span>
+                </div>
+
+                <div class="propuestas-calendar-mini-stats">
+                    <div class="propuestas-calendar-mini-stat">
+                        <span>Vista activa</span>
+                        <strong>{{ vista_actual|title }}</strong>
+                    </div>
+                    <div class="propuestas-calendar-mini-stat">
+                        <span>Registros visibles</span>
+                        <strong>{{ cantidad_visible }}</strong>
+                    </div>
+                    <div class="propuestas-calendar-mini-stat">
+                        <span>Meses agrupados</span>
+                        <strong>{{ resumen_grupos|length }}</strong>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     </aside>
 
     <section class="propuestas-calendar-board">
-        <div class="propuestas-calendar-nav">
-            <a href="{% url 'propuestas:calendario' %}?m={{ mes_anterior }}" class="btn btn-outline-secondary">
-                ← Mes anterior
-            </a>
+        {% if vista_actual == "calendario" %}
+            <div class="propuestas-calendar-nav">
+                <a href="{% url 'propuestas:calendario' %}?vista=calendario&m={{ mes_anterior }}{% if estados_calendario_query %}&{{ estados_calendario_query }}{% endif %}" class="btn btn-outline-secondary">
+                    ← Mes anterior
+                </a>
 
-            <h2 class="propuestas-calendar-nav-title">{{ mes_titulo }}</h2>
+                <h2 class="propuestas-calendar-nav-title">{{ mes_titulo }}</h2>
 
-            <a href="{% url 'propuestas:calendario' %}?m={{ mes_siguiente }}" class="btn btn-outline-secondary">
-                Mes siguiente →
-            </a>
-        </div>
+                <a href="{% url 'propuestas:calendario' %}?vista=calendario&m={{ mes_siguiente }}{% if estados_calendario_query %}&{{ estados_calendario_query }}{% endif %}" class="btn btn-outline-secondary">
+                    Mes siguiente →
+                </a>
+            </div>
 
-        <div class="propuestas-calendar-grid-wrap">
-            <div class="propuestas-calendar-grid">
-                <div class="propuestas-calendar-weekdays">
-                    {% for dia_nombre in dias_semana %}
-                        <div class="propuestas-calendar-weekday">{{ dia_nombre }}</div>
-                    {% endfor %}
-                </div>
-
-                {% for semana in semanas %}
-                    <div class="propuestas-calendar-week">
-                        {% for dia in semana %}
-                            <div class="propuestas-calendar-day {% if not dia.pertenece_mes %}is-outside{% endif %} {% if dia.es_hoy %}is-today{% endif %}">
-                                <div class="propuestas-calendar-day-header">
-                                    <span class="propuestas-calendar-day-number">{{ dia.numero }}</span>
-                                </div>
-
-                                <div class="propuestas-calendar-events">
-                                    {% if dia.eventos_visibles %}
-                                        {% for evento in dia.eventos_visibles %}
-                                            <a
-                                                href="{% url 'propuestas:detalle' evento.propuesta_id %}"
-                                                class="propuestas-calendar-event propuestas-calendar-event--{{ evento.tipo_evento }}"
-                                            >
-                                                <div class="propuestas-calendar-event-type">{{ evento.tipo_label }}</div>
-                                                <div class="propuestas-calendar-event-code">{{ evento.codigo }}</div>
-                                                <div class="propuestas-calendar-event-title">{{ evento.empresa_nombre }}</div>
-
-                                                <div class="propuestas-calendar-event-meta">
-                                                    <div>
-                                                        <strong>Monto total:</strong>
-                                                        {{ evento.moneda }} {{ evento.monto_total|floatformat:2|intcomma }}
-                                                    </div>
-
-                                                    <div>
-                                                        {% if evento.estado_pago == "cancelada" %}
-                                                            <span class="badge text-bg-success">Cancelada</span>
-                                                        {% elif evento.estado_pago == "con_adelantos" %}
-                                                            <span class="badge text-bg-warning">Con adelantos</span>
-                                                        {% else %}
-                                                            <span class="badge text-bg-secondary">Pendiente</span>
-                                                        {% endif %}
-                                                    </div>
-
-                                                    {% if evento.monto_evento %}
-                                                        <div class="text-muted">
-                                                            <strong>Monto del evento:</strong>
-                                                            {{ evento.moneda }} {{ evento.monto_evento|floatformat:2|intcomma }}
-                                                        </div>
-                                                    {% endif %}
-                                                </div>
-                                            </a>
-                                        {% endfor %}
-
-                                        {% if dia.eventos_extra > 0 %}
-                                            <button
-                                                class="propuestas-calendar-more-btn"
-                                                type="button"
-                                                data-bs-toggle="collapse"
-                                                data-bs-target="#extra-{{ dia.fecha|date:'Ymd' }}"
-                                                aria-expanded="false"
-                                            >
-                                                +{{ dia.eventos_extra }} más
-                                            </button>
-
-                                            <div class="collapse" id="extra-{{ dia.fecha|date:'Ymd' }}">
-                                                <div class="d-flex flex-column gap-2 mt-2">
-                                                    {% for evento in dia.eventos_extra_lista %}
-                                                        <a
-                                                            href="{% url 'propuestas:detalle' evento.propuesta_id %}"
-                                                            class="propuestas-calendar-event propuestas-calendar-event--{{ evento.tipo_evento }}"
-                                                        >
-                                                            <div class="propuestas-calendar-event-type">{{ evento.tipo_label }}</div>
-                                                            <div class="propuestas-calendar-event-code">{{ evento.codigo }}</div>
-                                                            <div class="propuestas-calendar-event-title">{{ evento.empresa_nombre }}</div>
-
-                                                            <div class="propuestas-calendar-event-meta">
-                                                                <div>
-                                                                    <strong>Monto total:</strong>
-                                                                    {{ evento.moneda }} {{ evento.monto_total|floatformat:2|intcomma }}
-                                                                </div>
-
-                                                                <div>
-                                                                    {% if evento.estado_pago == "cancelada" %}
-                                                                        <span class="badge text-bg-success">Cancelada</span>
-                                                                    {% elif evento.estado_pago == "con_adelantos" %}
-                                                                        <span class="badge text-bg-warning">Con adelantos</span>
-                                                                    {% else %}
-                                                                        <span class="badge text-bg-secondary">Pendiente</span>
-                                                                    {% endif %}
-                                                                </div>
-
-                                                                {% if evento.monto_evento %}
-                                                                    <div class="text-muted">
-                                                                        <strong>Monto del evento:</strong>
-                                                                        {{ evento.moneda }} {{ evento.monto_evento|floatformat:2|intcomma }}
-                                                                    </div>
-                                                                {% endif %}
-                                                            </div>
-                                                        </a>
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
-                                        {% endif %}
-                                    {% else %}
-                                        <div class="propuestas-calendar-empty">Sin eventos</div>
-                                    {% endif %}
-                                </div>
-                            </div>
+            <div class="propuestas-calendar-grid-wrap">
+                <div class="propuestas-calendar-grid">
+                    <div class="propuestas-calendar-weekdays">
+                        {% for dia_nombre in dias_semana %}
+                            <div class="propuestas-calendar-weekday">{{ dia_nombre }}</div>
                         {% endfor %}
                     </div>
-                {% endfor %}
+
+                    {% for semana in semanas %}
+                        <div class="propuestas-calendar-week">
+                            {% for dia in semana %}
+                                <div class="propuestas-calendar-day {% if not dia.pertenece_mes %}is-outside{% endif %} {% if dia.es_hoy %}is-today{% endif %}">
+                                    <div class="propuestas-calendar-day-header">
+                                        <span class="propuestas-calendar-day-number">{{ dia.numero }}</span>
+                                    </div>
+
+                                    <div class="propuestas-calendar-events">
+                                        {% if dia.eventos_visibles %}
+                                            {% for evento in dia.eventos_visibles %}
+                                                <a
+                                                    href="{% url 'propuestas:detalle' evento.propuesta_id %}"
+                                                    class="propuestas-calendar-event propuestas-calendar-event--{{ evento.tipo_evento }}"
+                                                >
+                                                    <div class="propuestas-calendar-event-type">{{ evento.tipo_label }}</div>
+                                                    <div class="propuestas-calendar-event-code">{{ evento.codigo }}</div>
+                                                    <div class="propuestas-calendar-event-title">{{ evento.empresa_nombre }}</div>
+
+                                                    <div class="propuestas-calendar-event-meta">
+                                                        <div>
+                                                            <strong>Monto comisión:</strong>
+                                                            {{ evento.moneda }} {{ evento.monto_total|floatformat:2|intcomma }}
+                                                        </div>
+
+                                                        <div>
+                                                            {% if evento.estado_pago == "cancelada" %}
+                                                                <span class="badge text-bg-success">Cancelada</span>
+                                                            {% elif evento.estado_pago == "con_adelantos" %}
+                                                                <span class="badge text-bg-warning">Con adelantos</span>
+                                                            {% else %}
+                                                                <span class="badge text-bg-secondary">Pendiente</span>
+                                                            {% endif %}
+                                                        </div>
+
+                                                        {% if evento.monto_evento %}
+                                                            <div class="text-muted">
+                                                                <strong>Monto del evento:</strong>
+                                                                {{ evento.moneda }} {{ evento.monto_evento|floatformat:2|intcomma }}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </a>
+                                            {% endfor %}
+
+                                            {% if dia.eventos_extra > 0 %}
+                                                <button
+                                                    class="propuestas-calendar-more-btn"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#extra-{{ dia.fecha|date:'Ymd' }}"
+                                                    aria-expanded="false"
+                                                >
+                                                    +{{ dia.eventos_extra }} más
+                                                </button>
+
+                                                <div class="collapse" id="extra-{{ dia.fecha|date:'Ymd' }}">
+                                                    <div class="d-flex flex-column gap-2 mt-2">
+                                                        {% for evento in dia.eventos_extra_lista %}
+                                                            <a
+                                                                href="{% url 'propuestas:detalle' evento.propuesta_id %}"
+                                                                class="propuestas-calendar-event propuestas-calendar-event--{{ evento.tipo_evento }}"
+                                                            >
+                                                                <div class="propuestas-calendar-event-type">{{ evento.tipo_label }}</div>
+                                                                <div class="propuestas-calendar-event-code">{{ evento.codigo }}</div>
+                                                                <div class="propuestas-calendar-event-title">{{ evento.empresa_nombre }}</div>
+
+                                                                <div class="propuestas-calendar-event-meta">
+                                                                    <div>
+                                                                        <strong>Monto comisión:</strong>
+                                                                        {{ evento.moneda }} {{ evento.monto_total|floatformat:2|intcomma }}
+                                                                    </div>
+
+                                                                    <div>
+                                                                        {% if evento.estado_pago == "cancelada" %}
+                                                                            <span class="badge text-bg-success">Cancelada</span>
+                                                                        {% elif evento.estado_pago == "con_adelantos" %}
+                                                                            <span class="badge text-bg-warning">Con adelantos</span>
+                                                                        {% else %}
+                                                                            <span class="badge text-bg-secondary">Pendiente</span>
+                                                                        {% endif %}
+                                                                    </div>
+
+                                                                    {% if evento.monto_evento %}
+                                                                        <div class="text-muted">
+                                                                            <strong>Monto del evento:</strong>
+                                                                            {{ evento.moneda }} {{ evento.monto_evento|floatformat:2|intcomma }}
+                                                                        </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </a>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="propuestas-calendar-empty">Sin eventos</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
+        {% else %}
+            <div class="propuestas-resumen-list">
+                {% if resumen_grupos %}
+                    {% for grupo in resumen_grupos %}
+                        <div class="propuestas-resumen-group">
+                            <div class="propuestas-resumen-group-header">
+                                <h2 class="propuestas-calendar-nav-title mb-0">{{ grupo.titulo }}</h2>
+                                <span class="badge text-bg-light">{{ grupo.items|length }} propuestas</span>
+                            </div>
+
+                            <div class="d-flex flex-column gap-3">
+                                {% for propuesta in grupo.items %}
+                                    <a href="{% url 'propuestas:detalle' propuesta.id %}" class="propuestas-resumen-card">
+                                        <div class="propuestas-resumen-card-top">
+                                            <div>
+                                                <div class="propuestas-calendar-event-type">
+                                                    {{ propuesta.tipo_propuesta_label }}
+                                                </div>
+                                                <div class="propuestas-calendar-event-code">
+                                                    {{ propuesta.codigo }}
+                                                </div>
+                                                <div class="propuestas-calendar-event-title">
+                                                    {{ propuesta.empresa_nombre }}
+                                                </div>
+                                            </div>
+
+                                            <div class="text-md-end">
+                                                <div class="propuestas-resumen-money">
+                                                    {{ propuesta.moneda }} {{ propuesta.monto_control|floatformat:2|intcomma }}
+                                                </div>
+                                                <small class="text-muted">
+                                                    Creada: {{ propuesta.fecha_creacion|date:"d/m/Y" }}
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <div class="propuestas-resumen-card-meta">
+                                            <div><strong>Entidad:</strong> {{ propuesta.entidad|default:"—" }}</div>
+                                            <div><strong>Saldo pendiente:</strong> {{ propuesta.moneda }} {{ propuesta.saldo_pendiente|floatformat:2|intcomma }}</div>
+                                            <div><strong>Adelantado:</strong> {{ propuesta.moneda }} {{ propuesta.total_adelantado|floatformat:2|intcomma }}</div>
+                                            <div><strong>Cancelado:</strong> {{ propuesta.moneda }} {{ propuesta.total_cancelado|floatformat:2|intcomma }}</div>
+                                        </div>
+
+                                        <div class="d-flex flex-wrap gap-2 mt-3">
+                                            {% if propuesta.estado_pago == "cancelada" %}
+                                                <span class="badge text-bg-success">Cancelada</span>
+                                            {% elif propuesta.estado_pago == "con_adelantos" %}
+                                                <span class="badge text-bg-warning">Con adelantos</span>
+                                            {% else %}
+                                                <span class="badge text-bg-secondary">Pendiente</span>
+                                            {% endif %}
+
+                                            {% for tipo in propuesta.tipos_relacionados %}
+                                                <span class="badge text-bg-light border">{{ tipo }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="propuestas-resumen-empty">
+                        No hay propuestas para esta vista.
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
     </section>
 </div>
-
 <link rel="stylesheet" href="{% static 'propuestas/propuestas.css' %}">
 {% endblock %}

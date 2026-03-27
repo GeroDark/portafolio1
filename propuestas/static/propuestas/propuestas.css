@@ -666,3 +666,161 @@
         top: auto;
     }
 }
+.propuestas-resumen-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.propuestas-resumen-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    text-decoration: none;
+    color: #495057;
+    background: #ffffff;
+    border: 1px solid #dfe4ea;
+    border-radius: 999px;
+    padding: 0.65rem 1rem;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: all 0.15s ease;
+}
+
+.propuestas-resumen-tab:hover,
+.propuestas-resumen-tab:focus {
+    color: #212529;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.propuestas-resumen-tab.is-active {
+    background: linear-gradient(135deg, #f26522, #ff8a4c);
+    border-color: #f26522;
+    color: #fff;
+}
+
+.propuestas-resumen-tab.is-active .badge {
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #fff !important;
+}
+
+.propuestas-resumen-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.propuestas-resumen-group {
+    background: #ffffff;
+    border: 1px solid #dfe4ea;
+    border-radius: 18px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+    padding: 1rem;
+}
+
+.propuestas-resumen-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.propuestas-resumen-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #e5e9ee;
+    border-radius: 16px;
+    padding: 1rem;
+    background: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.propuestas-resumen-card:hover,
+.propuestas-resumen-card:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    color: inherit;
+}
+
+.propuestas-resumen-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.propuestas-resumen-money {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #212529;
+}
+
+.propuestas-resumen-card-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem 1rem;
+    margin-top: 0.85rem;
+    font-size: 0.92rem;
+    color: #495057;
+}
+
+.propuestas-resumen-empty {
+    background: #ffffff;
+    border: 1px dashed #ced4da;
+    border-radius: 18px;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #6c757d;
+}
+
+@media (max-width: 767.98px) {
+    .propuestas-resumen-card-top,
+    .propuestas-resumen-group-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .propuestas-resumen-card-meta {
+        grid-template-columns: 1fr;
+    }
+}
+.propuestas-calendar-filters {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eceff3;
+}
+
+.propuestas-calendar-filters-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #212529;
+    margin-bottom: 0.75rem;
+}
+
+.propuestas-calendar-filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 0.9rem;
+}
+
+.propuestas-calendar-filter-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+    color: #495057;
+    cursor: pointer;
+}
+
+.propuestas-calendar-filter-option input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #f26522;
+}

@@ -237,26 +237,32 @@ class Propuesta(models.Model):
         agg = self.movimientos.aggregate(
             adelantos=Sum(
                 "monto",
-                filter=models.Q(tipo_movimiento=PropuestaMovimientoPago.TipoMovimiento.ADELANTO),
+                filter=models.Q(
+                    tipo_movimiento=PropuestaMovimientoPago.TipoMovimiento.ADELANTO
+                ),
             ),
             cancelado=Sum(
                 "monto",
-                filter=models.Q(tipo_movimiento=PropuestaMovimientoPago.TipoMovimiento.CANCELACION),
+                filter=models.Q(
+                    tipo_movimiento=PropuestaMovimientoPago.TipoMovimiento.CANCELACION
+                ),
             ),
             total=Sum("monto"),
         )
+
+        base_monto = self.comision_monto or self.monto_total or Decimal("0.00")
 
         self.total_adelantado = agg["adelantos"] or Decimal("0.00")
         self.total_cancelado = agg["cancelado"] or Decimal("0.00")
         self.total_pagado = agg["total"] or Decimal("0.00")
 
-        self.saldo_pendiente = (self.monto_total or Decimal("0.00")) - self.total_pagado
+        self.saldo_pendiente = base_monto - self.total_pagado
         if self.saldo_pendiente < Decimal("0.00"):
             self.saldo_pendiente = Decimal("0.00")
 
         if self.total_pagado <= Decimal("0.00"):
             self.estado_pago_actual = self.EstadoPago.PENDIENTE
-        elif (self.monto_total or Decimal("0.00")) > Decimal("0.00") and self.total_pagado >= self.monto_total:
+        elif base_monto > Decimal("0.00") and self.total_pagado >= base_monto:
             self.estado_pago_actual = self.EstadoPago.CANCELADA
         else:
             self.estado_pago_actual = self.EstadoPago.CON_ADELANTOS
@@ -334,8 +340,10 @@ class Propuesta(models.Model):
 
         self.tipos_relacionados = ",".join(tipos_limpios)
 
-        if not self.saldo_pendiente and self.monto_total:
-            self.saldo_pendiente = self.monto_total - (self.total_pagado or Decimal("0.00"))
+        base_monto = self.comision_monto or self.monto_total or Decimal("0.00")
+
+        if not self.saldo_pendiente and base_monto:
+            self.saldo_pendiente = base_monto - (self.total_pagado or Decimal("0.00"))
 
         super().save(*args, **kwargs)
 

@@ -204,7 +204,7 @@ def _base_evento_propuesta(
         "codigo": propuesta.codigo,
         "empresa_nombre": _empresa_nombre_propuesta(propuesta),
         "moneda": propuesta.moneda,
-        "monto_total": propuesta.monto_total,
+        "monto_total": propuesta.comision_monto,
         "estado_pago": propuesta.estado_pago_actual,
         "estado_pago_label": propuesta.get_estado_pago_actual_display(),
         "monto_evento": monto_evento,
